@@ -1,10 +1,9 @@
 # 2009-03-16 by gf
 
 # generic compiler and linker settings:
-CC     = gcc
-INCDIR = -I../lua/src
+INCDIR ?= -I../lua/src
+LIBDIR ?= -L. -L../lua/src
 LIB    = 
-LIBDIR =  -L. -L../lua/src
 CFLAGS = -Os -Wall -c #-g
 
 # generic platform specific rules:
@@ -25,7 +24,7 @@ else
     
   else  # windows, MinGW
     LFLAGS =  -shared
-    LIBS          = $(LIBDIR) $(LIB) -llua52 -mconsole -s
+    LIBS          = $(LIBDIR) $(LIB) -llua51 -mconsole -s
     EXESUFFIX = .exe
     SHLIBSUFFIX = .dll
 
@@ -48,3 +47,8 @@ LuaXML_lib.o:  LuaXML_lib.c
 clean:
 	rm -f *.o *~ LuaXML_lib.so LuaXML_lib.dll
 
+# run tests
+LUA ?= lua
+test:
+	$(LUA) -v unittest.lua
+	$(LUA) test.lua
