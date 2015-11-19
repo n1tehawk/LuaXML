@@ -1,0 +1,48 @@
+version: '#{build}'
+
+shallow_clone: true
+
+os: MinGW
+
+
+# install required packages via cinst (Lua 5.1)
+# set paths for Lua (itself), include files and lib
+# fetch LuaUnit source file (framework for unit tests)
+install:
+- cmd: >-
+    cinst lua
+
+    set LUADIR=C:\Program Files (x86)\Lua\5.1
+
+    set LUA="%LUADIR%\lua.exe"
+
+    set LUAINC="%LUADIR%\include"
+
+    set LUALIB="%LUADIR%\lib"
+
+    curl -fLsS -o luaunit.lua https://github.com/n1tehawk/luaunit/raw/nitehawk/luaunit.lua
+
+
+build_script:
+- cmd: >-
+    REM
+
+    REM Build via Makefile...
+
+    REM
+
+    set PATH=C:\MinGW\bin;%PATH%
+
+    mingw32-make INCDIR=-I\"%LUAINC%\" LIBDIR=-L\"%LUALIB%\"
+
+
+# Note: "make test" re-uses the LUA environment variable
+test_script:
+- cmd: >-
+    REM
+
+    REM Now running tests...
+
+    REM
+
+    mingw32-make test
