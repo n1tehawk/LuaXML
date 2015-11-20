@@ -48,10 +48,6 @@ THE SOFTWARE.
 #endif
 
 
-static const char ESC=27;
-static const char OPN=28;
-static const char CLS=29;
-
 //--- auxliary functions -------------------------------------------
 
 static const char* char2code(unsigned char ch, char buf[8]) {
@@ -70,6 +66,11 @@ static size_t find(const char* s, const char* pattern, size_t start) {
 	const char* found =strstr(s+start, pattern);
 	return found ? found-s : strlen(s);
 }
+
+// control chars used by the Tokenizer to denote special meanings
+#define ESC	27	/* end of scope, closing tag */
+#define OPN	28	/* "open", start of tag */
+#define CLS	29	/* closes opening tag, actual content follows */
 
 //--- internal tokenizer -------------------------------------------
 
@@ -129,10 +130,10 @@ static void Tokenizer_append(Tokenizer* tok, char ch) {
 }
 
 const char* Tokenizer_next(Tokenizer* tok) {
-	const char* ESC_str = "\033";
-	const char* OPEN_str = "\034";
-	const char* CLOSE_str = "\035";
-
+	// NUL-terminated strings for the special tokens
+	static const char ESC_str[] = {ESC, 0};
+	static const char OPEN_str[] = {OPN, 0};
+	static const char CLOSE_str[] = {CLS, 0};
 
 	if(tok->m_token) {
 		free(tok->m_token);
