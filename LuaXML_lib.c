@@ -56,7 +56,7 @@ static const char CLS=29;
 
 static const char* char2code(unsigned char ch, char buf[8]) {
 	unsigned char i=0;
-	buf[i++]='&'; 
+	buf[i++]='&';
 	buf[i++]='#';
 	if(ch>99) buf[i++]=ch/100+48;
 	if(ch>9) buf[i++]=(ch%100)/10+48;
@@ -134,13 +134,13 @@ const char* Tokenizer_next(Tokenizer* tok) {
 	const char* OPEN_str = "\034";
 	const char* CLOSE_str = "\035";
 
-	
+
 	if(tok->m_token) {
 		free(tok->m_token);
 		tok->m_token = 0;
 		tok->m_token_size=tok->m_token_capacity = 0;
 	}
-	
+
 	int quotMode=0;
 	int tokenComplete = 0;
 	while(tok->m_next_size || (tok->i < tok->s_size)) {
@@ -153,28 +153,28 @@ const char* Tokenizer_next(Tokenizer* tok) {
 		}
 
 		switch(tok->s[tok->i]) {
-		    case '"':
-		    case '\'':
+			case '"':
+			case '\'':
 			if(tok->tagMode) {
 				if(!quotMode) quotMode=tok->s[tok->i];
 				else if(quotMode==tok->s[tok->i]) quotMode=0;
 			}
 			Tokenizer_append(tok, tok->s[tok->i]);
 			break;
-		    case '<':
+			case '<':
 			if(!quotMode&&(tok->i+4<tok->s_size)&&(strncmp(tok->s+tok->i,"<!--",4)==0)) // strip comments
-			    tok->i=find(tok->s, "-->", tok->i+4)+2;
+				tok->i=find(tok->s, "-->", tok->i+4)+2;
 			else if(!quotMode&&(tok->i+9<tok->s_size)&&(strncmp(tok->s+tok->i,"<![CDATA[",9)==0)) { // interpet CDATA
-			    size_t b=tok->i+9;
-			    tok->i=find(tok->s, "]]>",b)+3;
-			    if(!tok->m_token_size) return Tokenizer_set(tok, tok->s+b, tok->i-b-3);
-			    tokenComplete = 1;
-			    tok->m_next = tok->s+b;
-			    tok->m_next_size = tok->i-b-3;
-			    --tok->i;
+				size_t b=tok->i+9;
+				tok->i=find(tok->s, "]]>",b)+3;
+				if(!tok->m_token_size) return Tokenizer_set(tok, tok->s+b, tok->i-b-3);
+				tokenComplete = 1;
+				tok->m_next = tok->s+b;
+				tok->m_next_size = tok->i-b-3;
+				--tok->i;
 			}
 			else if(!quotMode&&(tok->i+1<tok->s_size)&&((tok->s[tok->i+1]=='?')||(tok->s[tok->i+1]=='!'))) // strip meta information
-			    tok->i=find(tok->s, ">", tok->i+2);
+				tok->i=find(tok->s, ">", tok->i+2);
 			else if(!quotMode&&!tok->tagMode) {
 				if((tok->i+1<tok->s_size)&&(tok->s[tok->i+1]=='/')) {
 					tok->m_next=ESC_str;
@@ -184,13 +184,13 @@ const char* Tokenizer_next(Tokenizer* tok) {
 				else {
 					tok->m_next = OPEN_str;
 					tok->m_next_size = 1;
-					tok->tagMode=1; 
+					tok->tagMode=1;
 				}
 				tokenComplete = 1;
 			}
 			else Tokenizer_append(tok, tok->s[tok->i]);
 			break;
-		    case '/': 
+			case '/':
 			if(tok->tagMode&&!quotMode) {
 				tokenComplete = 1;
 				if((tok->i+1 < tok->s_size) && (tok->s[tok->i+1]=='>')) {
@@ -200,28 +200,28 @@ const char* Tokenizer_next(Tokenizer* tok) {
 					++tok->i;
 				}
 				else Tokenizer_append(tok, tok->s[tok->i]);
-			}                    
+			}
 			else Tokenizer_append(tok, tok->s[tok->i]);
 			break;
-		    case '>': 
+			case '>':
 			if(!quotMode&&tok->tagMode) {
 				tok->tagMode=0;
 				tokenComplete = 1;
 				tok->m_next = CLOSE_str;
 				tok->m_next_size = 1;
-			}                    
+			}
 			else Tokenizer_append(tok, tok->s[tok->i]);
 			break;
-		    case ' ':
-		    case '\r':
-		    case '\n':
-		    case '\t':
+			case ' ':
+			case '\r':
+			case '\n':
+			case '\t':
 			if(tok->tagMode&&!quotMode) {
-			    if(tok->m_token_size) tokenComplete=1;
+				if(tok->m_token_size) tokenComplete=1;
 			}
 			else if(tok->m_token_size) Tokenizer_append(tok, tok->s[tok->i]);
 			break;
-		    default: Tokenizer_append(tok, tok->s[tok->i]);
+			default: Tokenizer_append(tok, tok->s[tok->i]);
 		}
 		++tok->i;
 		if((tok->i>=tok->s_size)||(tokenComplete&&tok->m_token_size)) {
@@ -242,7 +242,7 @@ static size_t sv_code_size=0;
 /// stores currently allocated capacity for special character codes
 static size_t sv_code_capacity=16;
 /// stores code table for special characters
-static char** sv_code=0; 
+static char** sv_code=0;
 
 //--- public methods -----------------------------------------------
 
