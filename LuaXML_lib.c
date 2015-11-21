@@ -50,18 +50,6 @@ THE SOFTWARE.
 
 //--- auxliary functions -------------------------------------------
 
-static const char* char2code(unsigned char ch, char buf[8]) {
-	unsigned char i=0;
-	buf[i++]='&';
-	buf[i++]='#';
-	if(ch>99) buf[i++]=ch/100+48;
-	if(ch>9) buf[i++]=(ch%100)/10+48;
-	buf[i++]=ch%10+48;
-	buf[i++]=';';
-	buf[i]=0;
-	return buf;
-}
-
 static size_t find(const char* s, const char* pattern, size_t start) {
 	const char* found =strstr(s+start, pattern);
 	return found ? found-s : strlen(s);
@@ -413,23 +401,26 @@ int Xml_encode(lua_State *L) {
 	if(lua_gettop(L)!=1)
 		return 0;
 	luaL_checkstring(L,-1);
+	// encode special entities
 	size_t i;
 	for(i=0; i<sv_code_size; i+=2) {
 		luaL_gsub(L, lua_tostring(L,-1), sv_code[i], sv_code[i+1]);
 		lua_remove(L,-2);
 	}
+	// transfer string one character at a time, encoding any chars with MSB set
 	char buf[8];
-	const char* s=lua_tostring(L,1);
-	size_t start, pos;
+	const unsigned char *s = (unsigned char *)lua_tostring(L, 1);
 	luaL_Buffer b;
 	luaL_buffinit(L, &b);
-	for(start=pos=0; s[pos]!=0; ++pos) if(s[pos]<0) {
-		if(pos>start) luaL_addlstring(&b,s+start, pos-start);
-		luaL_addstring(&b,char2code((unsigned char)(s[pos]),buf));
-		start=pos+1;
+	while (*s) {
+		if (*s < 128)
+			luaL_addchar(&b, *s); // copy character literally
+		else {
+			snprintf(buf, sizeof(buf), "&#%d;", *s); // encode char
+			luaL_addstring(&b, buf);
+		}
+		s++;
 	}
-	if(pos>start)
-		luaL_addlstring(&b,s+start, pos-start);
 	luaL_pushresult(&b);
 	lua_remove(L,-2);
 	return 1;
