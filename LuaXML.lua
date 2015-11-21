@@ -8,9 +8,9 @@ xml.TAG = 0
 function xml.tag(var,tag)
 	if base.type(var)~="table" then return end
 	if base.type(tag)=="nil" then 
-		return var[TAG]
+		return var[xml.TAG]
 	end
-	var[TAG] = tag
+	var[xml.TAG] = tag
 end
 
 -- creates a new LuaXML object either by setting the metatable of an existing Lua table or by setting its tag
