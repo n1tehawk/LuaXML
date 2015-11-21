@@ -26,27 +26,27 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-#if defined __WIN32__ || defined WIN32
-# include <windows.h>
-# define _EXPORT __declspec(dllexport)
-#else
-# define _EXPORT
-#endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-#include <lua.h>
-#include <lauxlib.h>
-#include <lualib.h>
-#ifdef __cplusplus
-} // extern "C"
-#endif
+#include "LuaXML_lib.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
+
+/* compatibility with older Lua versions (<5.2) */
+#if LUA_VERSION_NUM < 502
+
+	// Substitute lua_objlen() for lua_rawlen()
+	#define lua_rawlen(L, index)	lua_objlen(L, index)
+
+	// Make use of luaL_register() to achieve same result as luaL_newlib()
+	#define luaL_newlib(L, funcs) do { \
+		lua_newtable(L); \
+		luaL_register(L, NULL, funcs); \
+	} while (0)
+
+#endif
+
 
 static const char ESC=27;
 static const char OPN=28;
