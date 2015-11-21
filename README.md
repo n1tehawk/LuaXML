@@ -1,4 +1,6 @@
 [![License](http://img.shields.io/badge/License-MIT-green.svg)](#luaxml-license)
+[![Build status](https://ci.appveyor.com/api/projects/status/d93a5k3b1xa8sb3r?svg=true)](https://ci.appveyor.com/project/n1tehawk/luaxml)
+[![Build Status](https://travis-ci.org/n1tehawk/LuaXML.svg?branch=master)](https://travis-ci.org/n1tehawk/LuaXML)
 
 ## LuaXML
 
