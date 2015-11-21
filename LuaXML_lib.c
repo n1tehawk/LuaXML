@@ -58,6 +58,39 @@ static size_t find(const char* s, const char* pattern, size_t start) {
 	return found ? found-s : strlen(s);
 }
 
+// push (arbitrary Lua) value to be used as tag key, placing it on top of stack
+static inline void push_TAG_key(lua_State *L) {
+	/* Note: Currently this is the number 0, which fits in nicely with using
+	 * string keys for attribute-value pairs and also 'stays clear' of the
+	 * array of sub-elements (starting at index 1).
+	 * Theoretically, this could be any kind of Lua value; but when using a
+	 * string key (e.g. "TAG"), extra care needs to be taken that it doesn't
+	 * get confused with an attribute - which means that the str() function
+	 * should be modified accordingly (to recognise and avoid the tag key).
+	 */
+	lua_pushinteger(L, 0);
+}
+
+// convert Lua table at given index to an XML "object", by setting its metatable
+static void make_xml_object(lua_State *L, int index) {
+	if (index < 0) index += lua_gettop(L) + 1; // relative to absolute index
+	if (!lua_istable(L, index))
+		luaL_error(L, "%s() error: invalid type at %d - expected table, got %s",
+			__func__, index, lua_typename(L, lua_type(L, index)));
+
+	luaL_getmetatable(L, LUAXML_META);
+
+	lua_pushliteral(L, "__index");
+	lua_rawget(L, -2); // retrieve the actual module table
+	lua_pushliteral(L, "__tostring");
+	lua_pushliteral(L, "str");
+	lua_rawget(L, -3); // try to retrieve function via "str" key
+	lua_remove(L, -3);
+	lua_rawset(L, -3); // store function as __tostring metamethod
+
+	lua_setmetatable(L, index); // assign metatable
+}
+
 /*
  * Lua C function to replace a gsub() match with the corresponding character.
  * Xml_pushDecode() will use this as a replacement function argument to undo
@@ -327,21 +360,10 @@ int Xml_eval(lua_State *L) {
 			}
 			else return lua_gettop(L);
 		}
-		// assign metatable:
-		luaL_getmetatable(L, LUAXML_META);
-
-		lua_pushliteral(L, "__index");
-		lua_rawget(L, -2); // retrieve the actual module table
-		lua_pushliteral(L, "__tostring");
-		lua_pushliteral(L, "str");
-		lua_rawget(L, -3); // try to retrieve function via "str" key
-		lua_remove(L, -3);
-		lua_rawset(L, -3); // store function as __tostring metamethod
-
-		lua_setmetatable(L, -2); // set metatable of Lua value
+		make_xml_object(L, -1); // assign metatable
 
 		// parse tag and content:
-		lua_pushinteger(L, 0); // use index 0 for storing the tag
+		push_TAG_key(L); // place tag key on top of stack
 		lua_pushstring(L, Tokenizer_next(tok));
 		lua_rawset(L, -3);
 
