@@ -22,9 +22,9 @@ function TestXml:test_basics()
 	lu.assertEquals(foobar.bar, "true")
 
 	-- direct conversion (XML 'encapsulation') of Lua values
-	lu.assertEquals(xml.str(true), "<boolean> true </boolean>\n")
-	lu.assertEquals(xml.str(123), "<number> 123 </number>\n")
-	lu.assertEquals(xml.str("bar"), "<string> bar </string>\n")
+	lu.assertEquals(xml.str(true), "<boolean>true</boolean>\n")
+	lu.assertEquals(xml.str(123), "<number>123</number>\n")
+	lu.assertEquals(xml.str("bar"), "<string>bar</string>\n")
 
 	-- construct new XML object in a piecemeal fashion, and call a method
 	foobar = {bar = false}
