@@ -304,6 +304,82 @@ static char** sv_code=0;
 
 //--- public methods -----------------------------------------------
 
+/** sets or returns tag of a LuaXML object.
+This method is just "syntactic sugar" (using a typical Lua term) that allows
+the writing of clearer code. LuaXML stores the tag value of an XML statement
+at table index 0, hence it can be simply accessed or altered by `var[0]`.
+However, writing `var:tag()` for access or `var:tag("newTag")` for altering
+may be more self explanatory (and future-proof in case LuaXML's tag handling
+should ever change).
+
+@function tag
+@param var  the variable whose tag should be accessed, a LuaXML object
+@tparam ?string tag  the new tag to be set
+@return  If you have passed a new tag, the function will return `var` (with
+its tag changed); otherwise the result will be the current tag of `var`
+(normally a string).
+*/
+int Xml_tag(lua_State *L) {
+	// the function will only operate on tables
+	if lua_istable(L, 1) {
+		lua_settop(L, 2);
+		push_TAG_key(L); // place tag key on top of stack (#3)
+		if (lua_type(L, 2) == LUA_TSTRING) {
+			lua_pushvalue(L, 2); // duplicate the value
+			lua_rawset(L, 1);
+			// we return the (modified) table
+			lua_settop(L, 1);
+			return 1;
+		} else {
+			// "tag" is empty or wrong type, retrieve the current tag
+			lua_rawget(L, 1);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+/** creates a LuaXML "object", and optionally sets its tag.
+The function either sets the metatable of an existing Lua table, or creates a
+new (empty) "object". If you pass an optional` tag` string, it will be assigned
+to the result.
+
+(It's also possible to call this as `new(tag)`, which creates a new XML object
+with the given tag and is equivalent to `new({}, tag)`.)
+
+Note that it's not mandatory to use this function in order to treat a Lua table
+as LuaXML object. Setting the metatable just allows the usage of a more 
+object-oriented syntax (e.g. `xmlvar:str()` instead of `xml.str(xmlvar)`).
+XML objects created by `load` or `eval` automatically offer the
+object-oriented syntax.
+
+@function new
+@param arg (optional)  _(1)_ a table to be converted to a LuaXML object,
+or _(2)_ the tag of the new LuaXML object
+@tparam ?string tag  a tag value that will be assigned to the object
+@return  LuaXML object, either newly created or the conversion of `arg`;
+optionally tagged as requested
+*/
+int Xml_new(lua_State *L) {
+	if (!lua_istable(L, 1)) {
+		// create a new table and move it to the bottom of the stack (#1),
+		// possibly shifting other elements "one up"
+		lua_newtable(L);
+		lua_insert(L, 1);
+	}
+	// element at #1 now is a table, convert to "object"
+	make_xml_object(L, 1);
+
+	if (lua_type(L, 2) == LUA_TSTRING) {
+		lua_pushcfunction(L, Xml_tag);
+		lua_pushvalue(L, 1); // duplicate the object table
+		lua_pushvalue(L, 2); // duplicate the tag (string)
+		lua_call(L, 2, 0); // call the "tag" function, discarding any result
+	}
+	lua_settop(L, 1);
+	return 1;
+}
+
 static void Xml_pushDecode(lua_State *L, const char *s, int size) {
 	if (size == 0) {
 		lua_pushliteral(L, "");
@@ -500,6 +576,8 @@ extern "C" {
 #endif
 int _EXPORT luaopen_LuaXML_lib (lua_State* L) {
 	static const struct luaL_Reg funcs[] = {
+		{"tag", Xml_tag},
+		{"new", Xml_new},
 		{"load", Xml_load},
 		{"eval", Xml_eval},
 		{"encode", Xml_encode},
