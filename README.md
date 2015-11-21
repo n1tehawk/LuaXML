@@ -27,7 +27,7 @@ flavours of MS Windows, and MacOS X.
 
 ```lua
 -- import the LuaXML module
-xml = require("LuaXML")
+local xml = require("LuaXML")
 -- load XML data from file "test.xml" into local table xfile
 local xfile = xml.load("test.xml")
 -- search for substatement having the tag "scene"
