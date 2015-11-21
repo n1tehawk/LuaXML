@@ -1,6 +1,6 @@
 --[[--
-Import the LuaXML module as global object "xml":
-	xml = require("LuaXML")
+To use LuaXML, first import the module - for example like this:
+	local xml = require("LuaXML")
 
 LuaXML consists of a Lua file (`LuaXML.lua`) and a corresponding C module
 (`LuaXML_lib`) - normally a shared library (`.dll`/`.so`), although a static
@@ -24,7 +24,7 @@ at table index 0, hence it can be simply accessed or altered by `var[0]` or
 writing `var:tag()` for access or `var:tag("newTag")` for altering may be
 more self explanatory.
 
-@function xml.tag
+@function tag
 @param var  the variable whose tag should be accessed, a LuaXML object
 @tparam ?string tag  the new tag to be set
 @return  the current tag as string
@@ -44,10 +44,10 @@ by creating a new (empty) object and setting its tag.
 Note that it's not mandatory to use this function in order to treat a Lua table
 as LuaXML object. Setting the metatable just allows the usage of a more 
 object-oriented syntax (e.g. `xmlvar:str()` instead of `xml.str(xmlvar)`).
-XML objects created by `xml.load` or `xml.eval` automatically offer the
+XML objects created by `load` or `eval` automatically offer the
 object-oriented syntax.
 
-@function xml.new
+@function new
 @param arg  (optional) _(1)_ a table to be converted to a LuaXML object,
 or _(2)_ the tag of the new LuaXML object
 @return  new LuaXML object
@@ -66,7 +66,7 @@ end
 --[[-- appends a new subordinate LuaXML object to an existing one.
 optionally sets tag
 
-@function xml.append
+@function append
 @param var  the parent LuaXML object
 @tparam ?string tag  the tag of the appended LuaXML object
 @return  appended LuaXML object, or `nil` in case of errors
@@ -79,7 +79,7 @@ function xml.append(var,tag)
 end
 
 --[[-- converts any Lua var to an XML string.
-@function xml.str
+@function str
 @param var  the variable to be converted, normally a table
 @tparam ?number indent  the current level of indentation for pretty output. Mainly for internal use.
 @tparam ?string tag  the tag to be used for a table without tag. Mainly for internal use.
@@ -130,7 +130,7 @@ end
 Basically this simply exports the string representation `xml.str(var)`
 (or `var:str()`), plus a standard header.
 
-@function xml.save
+@function save
 @param var  the variable to be saved, normally a table
 @tparam string filename  the filename to be used. An existing file of the same name gets overwritten.
 ]]--
@@ -146,7 +146,7 @@ end
 --[[-- recursively searches a Lua table for a subelement
 matching the provided tag and attribute.
 
-@function xml.find
+@function find
 @param var  the table to be searched in
 @tparam ?string tag  the XML tag to be found
 @tparam ?string key  the attribute key (= exact name) to be found

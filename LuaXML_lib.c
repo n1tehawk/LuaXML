@@ -49,6 +49,8 @@ THE SOFTWARE.
 #endif
 
 
+#define LUAXML_META	"LuaXML" // name to be used for metatable
+
 //--- auxliary functions -------------------------------------------
 
 static size_t find(const char* s, const char* pattern, size_t start) {
@@ -281,7 +283,7 @@ static void Xml_pushDecode(lua_State* L, const char* s, size_t s_size) {
 }
 
 /** converts an XML string to a Lua table.
-@function xml.eval
+@function eval
 @tparam string xmlstring  the string to be converted
 @return  a Lua table containing the XML data, or `nil` in case of errors
 */
@@ -313,19 +315,18 @@ int Xml_eval(lua_State *L) {
 			}
 			else return lua_gettop(L);
 		}
-		// set metatable:
-		lua_newtable(L);
-		lua_pushliteral(L, "__index");
-		lua_getglobal(L, "xml");
-		lua_rawset(L, -3);
+		// assign metatable:
+		luaL_getmetatable(L, LUAXML_META);
 
-		lua_pushliteral(L, "__tostring"); // set __tostring metamethod
-		lua_getglobal(L, "xml");
+		lua_pushliteral(L, "__index");
+		lua_rawget(L, -2); // retrieve the actual module table
+		lua_pushliteral(L, "__tostring");
 		lua_pushliteral(L, "str");
-		lua_rawget(L, -2);
-		lua_remove(L, -2);
-		lua_rawset(L, -3);
-		lua_setmetatable(L, -2);
+		lua_rawget(L, -3); // try to retrieve function via "str" key
+		lua_remove(L, -3);
+		lua_rawset(L, -3); // store function as __tostring metamethod
+
+		lua_setmetatable(L, -2); // set metatable of Lua value
 
 		// parse tag and content:
 		lua_pushinteger(L, 0); // use index 0 for storing the tag
@@ -367,9 +368,9 @@ int Xml_eval(lua_State *L) {
 }
 
 /** loads XML data from a file and returns it as table.
-Basically, this is just calling `xml.eval` on the given file's content.
+Basically, this is just calling `eval` on the given file's content.
 
-@function xml.load
+@function load
 @tparam string filename  the name and path of the file to be loaded
 @return  a Lua table representing the XML data, or `nil` in case of errors
 */
@@ -400,10 +401,10 @@ ANSI codes above 127 are directly converted to the XML character codes of the
 same number. If more character codes are needed, they can be registered using
 this function.
 
-@function xml.registerCode
+@function registerCode
 @tparam string decoded  the character (sequence) to be used within Lua
 @tparam string encoded  the character entity to be used in XML
-@see xml.encode
+@see encode
 */
 int Xml_registerCode(lua_State *L) {
 	const char * decoded = luaL_checkstring(L,1);
@@ -428,10 +429,10 @@ int Xml_registerCode(lua_State *L) {
 This function transforms` str` by replacing any special characters with
 suitable XML encodings.
 
-@function xml.encode
+@function encode
 @tparam string str  string to be transformed
 @treturn string  the XML-encoded string
-@see xml.registerCode
+@see registerCode
 */
 int Xml_encode(lua_State *L) {
 	if(lua_gettop(L)!=1)
@@ -474,6 +475,14 @@ int _EXPORT luaopen_LuaXML_lib (lua_State* L) {
 		{NULL, NULL}
 	};
 	luaL_newlib(L, funcs);
+
+	// create a metatable for LuaXML "objects"
+	luaL_newmetatable(L, LUAXML_META);
+	lua_pushliteral(L, "__index");
+	lua_pushvalue(L, -3); // duplicate the module table
+	lua_rawset(L, -3); // and set it as metaindex
+	lua_pop(L, 1); // drop value (metatable)
+
 	// register default codes:
 	if(!sv_code) {
 		sv_code=malloc(sv_code_capacity * sizeof(char*));

@@ -1,7 +1,7 @@
 -- unit tests for LuaXML
 
 local lu = require('luaunit')
-xml = require('LuaXML')
+local xml = require('LuaXML')
 
 TestXml = {} -- the test suite
 
@@ -53,7 +53,7 @@ function TestXml:test_basics()
 		xml.load, "invalid_filename")
 
 	-- safeguard against global namespace pollution
-	--lu.assertNil(_G.xml)
+	lu.assertNil(_G.xml)
 end
 
 function TestXml:test_parse()

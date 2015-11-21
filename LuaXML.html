@@ -44,9 +44,9 @@
 <div id="content">
 
 <h1>Module <code>LuaXML</code></h1>
-<p>Import the LuaXML module as global object &ldquo;xml&rdquo;:</p>
+<p>To use LuaXML, first import the module &ndash; for example like this:</p>
 
-<pre><code>xml = require("LuaXML")
+<pre><code>local xml = require("LuaXML")
 </code></pre>
 
 <p>LuaXML consists of a Lua file (<code>LuaXML.lua</code>) and a corresponding C module
@@ -61,45 +61,45 @@ that they are found in Lua&rsquo;s package search path.</p>
 <h2><a href="#Functions">Functions</a></h2>
 <table class="function_list">
 	<tr>
-	<td class="name" nowrap><a href="#xml.append">xml.append (var, tag)</a></td>
+	<td class="name" nowrap><a href="#append">append (var, tag)</a></td>
 	<td class="summary">appends a new subordinate LuaXML object to an existing one.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#xml.encode">xml.encode (str)</a></td>
+	<td class="name" nowrap><a href="#encode">encode (str)</a></td>
 	<td class="summary">converts a string to XML encoding.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#xml.eval">xml.eval (xmlstring)</a></td>
+	<td class="name" nowrap><a href="#eval">eval (xmlstring)</a></td>
 	<td class="summary">converts an XML string to a Lua table.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#xml.find">xml.find (var, tag, key, value)</a></td>
+	<td class="name" nowrap><a href="#find">find (var, tag, key, value)</a></td>
 	<td class="summary">recursively searches a Lua table for a subelement
 matching the provided tag and attribute.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#xml.load">xml.load (filename)</a></td>
+	<td class="name" nowrap><a href="#load">load (filename)</a></td>
 	<td class="summary">loads XML data from a file and returns it as table.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#xml.new">xml.new (arg)</a></td>
+	<td class="name" nowrap><a href="#new">new (arg)</a></td>
 	<td class="summary">creates a new LuaXML object.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#xml.registerCode">xml.registerCode (decoded, encoded)</a></td>
+	<td class="name" nowrap><a href="#registerCode">registerCode (decoded, encoded)</a></td>
 	<td class="summary">registers a custom code for the conversion between non-standard characters
 and XML character entities.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#xml.save">xml.save (var, filename)</a></td>
+	<td class="name" nowrap><a href="#save">save (var, filename)</a></td>
 	<td class="summary">saves a Lua var as XML file.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#xml.str">xml.str (var, indent, tag)</a></td>
+	<td class="name" nowrap><a href="#str">str (var, indent, tag)</a></td>
 	<td class="summary">converts any Lua var to an XML string.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#xml.tag">xml.tag (var, tag)</a></td>
+	<td class="name" nowrap><a href="#tag">tag (var, tag)</a></td>
 	<td class="summary">sets or returns tag of a LuaXML object.</td>
 	</tr>
 </table>
@@ -118,8 +118,8 @@ and XML character entities.</td>
     <h2><a name="Functions"></a>Functions</h2>
     <dl class="function">
     <dt>
-    <a name = "xml.append"></a>
-    <strong>xml.append (var, tag)</strong>
+    <a name = "append"></a>
+    <strong>append (var, tag)</strong>
     </dt>
     <dd>
     appends a new subordinate LuaXML object to an existing one.
@@ -148,8 +148,8 @@ optionally sets tag
 
 </dd>
     <dt>
-    <a name = "xml.encode"></a>
-    <strong>xml.encode (str)</strong>
+    <a name = "encode"></a>
+    <strong>encode (str)</strong>
     </dt>
     <dd>
     converts a string to XML encoding.
@@ -175,14 +175,14 @@ suitable XML encodings.
 
     <h3>See also:</h3>
     <ul>
-         <a href="LuaXML.html#xml.registerCode">xml.registerCode</a>
+         <a href="LuaXML.html#registerCode">registerCode</a>
     </ul>
 
 
 </dd>
     <dt>
-    <a name = "xml.eval"></a>
-    <strong>xml.eval (xmlstring)</strong>
+    <a name = "eval"></a>
+    <strong>eval (xmlstring)</strong>
     </dt>
     <dd>
     converts an XML string to a Lua table.
@@ -207,8 +207,8 @@ suitable XML encodings.
 
 </dd>
     <dt>
-    <a name = "xml.find"></a>
-    <strong>xml.find (var, tag, key, value)</strong>
+    <a name = "find"></a>
+    <strong>find (var, tag, key, value)</strong>
     </dt>
     <dd>
     recursively searches a Lua table for a subelement
@@ -244,12 +244,12 @@ matching the provided tag and attribute.
 
 </dd>
     <dt>
-    <a name = "xml.load"></a>
-    <strong>xml.load (filename)</strong>
+    <a name = "load"></a>
+    <strong>load (filename)</strong>
     </dt>
     <dd>
     loads XML data from a file and returns it as table.
-Basically, this is just calling <a href="LuaXML.html#xml.eval">xml.eval</a>  on the given file&rsquo;s content.
+Basically, this is just calling <a href="LuaXML.html#eval">eval</a>  on the given file&rsquo;s content.
 
 
     <h3>Parameters:</h3>
@@ -271,8 +271,8 @@ Basically, this is just calling <a href="LuaXML.html#xml.eval">xml.eval</a>  on 
 
 </dd>
     <dt>
-    <a name = "xml.new"></a>
-    <strong>xml.new (arg)</strong>
+    <a name = "new"></a>
+    <strong>new (arg)</strong>
     </dt>
     <dd>
     creates a new LuaXML object.
@@ -282,7 +282,7 @@ by creating a new (empty) object and setting its tag.</p>
 <p>Note that it&rsquo;s not mandatory to use this function in order to treat a Lua table
 as LuaXML object. Setting the metatable just allows the usage of a more
 object-oriented syntax (e.g. <code>xmlvar:str()</code> instead of <code>xml.str(xmlvar)</code>).
-XML objects created by <a href="LuaXML.html#xml.load">xml.load</a>  or <a href="LuaXML.html#xml.eval">xml.eval</a>  automatically offer the
+XML objects created by <a href="LuaXML.html#load">load</a>  or <a href="LuaXML.html#eval">eval</a>  automatically offer the
 object-oriented syntax.
 
 
@@ -305,8 +305,8 @@ or <em>(2)</em> the tag of the new LuaXML object
 
 </dd>
     <dt>
-    <a name = "xml.registerCode"></a>
-    <strong>xml.registerCode (decoded, encoded)</strong>
+    <a name = "registerCode"></a>
+    <strong>registerCode (decoded, encoded)</strong>
     </dt>
     <dd>
     registers a custom code for the conversion between non-standard characters
@@ -338,14 +338,14 @@ this function.
 
     <h3>See also:</h3>
     <ul>
-         <a href="LuaXML.html#xml.encode">xml.encode</a>
+         <a href="LuaXML.html#encode">encode</a>
     </ul>
 
 
 </dd>
     <dt>
-    <a name = "xml.save"></a>
-    <strong>xml.save (var, filename)</strong>
+    <a name = "save"></a>
+    <strong>save (var, filename)</strong>
     </dt>
     <dd>
     saves a Lua var as XML file.
@@ -370,8 +370,8 @@ Basically this simply exports the string representation <code>xml.str(var)</code
 
 </dd>
     <dt>
-    <a name = "xml.str"></a>
-    <strong>xml.str (var, indent, tag)</strong>
+    <a name = "str"></a>
+    <strong>str (var, indent, tag)</strong>
     </dt>
     <dd>
     converts any Lua var to an XML string.
@@ -404,8 +404,8 @@ Basically this simply exports the string representation <code>xml.str(var)</code
 
 </dd>
     <dt>
-    <a name = "xml.tag"></a>
-    <strong>xml.tag (var, tag)</strong>
+    <a name = "tag"></a>
+    <strong>tag (var, tag)</strong>
     </dt>
     <dd>
     sets or returns tag of a LuaXML object.
