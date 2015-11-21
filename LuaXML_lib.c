@@ -95,8 +95,7 @@ typedef struct Tokenizer_s  {
 } Tokenizer;
 
 Tokenizer* Tokenizer_new(const char* str, size_t str_size) {
-	Tokenizer *tok = (Tokenizer*)malloc(sizeof(Tokenizer));
-	memset(tok, 0, sizeof(Tokenizer));
+	Tokenizer *tok = calloc(1, sizeof(Tokenizer));
 	tok->s_size = str_size;
 	tok->s = str;
 	return tok;
@@ -112,7 +111,7 @@ void Tokenizer_delete(Tokenizer* tok) {
 static const char* Tokenizer_set(Tokenizer* tok, const char* s, size_t size) {
 	if(!size||!s) return 0;
 	free(tok->m_token);
-	tok->m_token = (char*)malloc(size+1);
+	tok->m_token = malloc(size + 1);
 	strncpy(tok->m_token,s, size);
 	tok->m_token[size] = 0;
 	tok->m_token_size = tok->m_token_capacity = size;
@@ -123,7 +122,7 @@ static const char* Tokenizer_set(Tokenizer* tok, const char* s, size_t size) {
 static void Tokenizer_append(Tokenizer* tok, char ch) {
 	if(tok->m_token_size+1>=tok->m_token_capacity) {
 		tok->m_token_capacity = (tok->m_token_capacity==0) ? 16 : tok->m_token_capacity*2;
-		tok->m_token = (char*)realloc(tok->m_token, tok->m_token_capacity);
+		tok->m_token = realloc(tok->m_token, tok->m_token_capacity);
 	}
 	tok->m_token[tok->m_token_size]=ch;
 	tok->m_token[++tok->m_token_size]=0;
@@ -283,10 +282,10 @@ int Xml_eval(lua_State *L) {
 	char* str = 0;
 	size_t str_size=0;
 	if(lua_isuserdata(L,1))
-		str = (char*)lua_touserdata(L,1);
+		str = lua_touserdata(L,1);
 	else {
 		const char * sTmp = luaL_checklstring(L,1,&str_size);
-		str = (char*)malloc(str_size+1);
+		str = malloc(str_size + 1);
 		memcpy(str, sTmp, str_size);
 		str[str_size]=0;
 	}
@@ -368,7 +367,7 @@ int Xml_load (lua_State *L) {
 	fseek (file , 0 , SEEK_END);
 	size_t sz = ftell (file);
 	rewind (file);
-	char* buffer = (char*)malloc(sz+1);
+	char *buffer = malloc(sz + 1);
 	sz = fread (buffer,1,sz,file);
 	fclose(file);
 	buffer[sz]=0;
@@ -387,11 +386,11 @@ int Xml_registerCode(lua_State *L) {
 			return luaL_error(L,"LuaXML ERROR: code already exists.");
 	if(sv_code_size+2>sv_code_capacity) {
 		sv_code_capacity*=2;
-		sv_code = (char**)realloc(sv_code, sv_code_capacity*sizeof(char*));
+		sv_code = realloc(sv_code, sv_code_capacity * sizeof(char*));
 	}
-	sv_code[sv_code_size]=(char*)malloc(strlen(decoded)+1);
+	sv_code[sv_code_size]=malloc(strlen(decoded) + 1);
 	strcpy(sv_code[sv_code_size++], decoded);
-	sv_code[sv_code_size]=(char*)malloc(strlen(encoded)+1);
+	sv_code[sv_code_size]=malloc(strlen(encoded) + 1);
 	strcpy(sv_code[sv_code_size++],encoded);
 	return 0;
 }
@@ -436,7 +435,7 @@ int _EXPORT luaopen_LuaXML_lib (lua_State* L) {
 	luaL_newlib(L, funcs);
 	// register default codes:
 	if(!sv_code) {
-		sv_code=(char**)malloc(sv_code_capacity*sizeof(char*));
+		sv_code=malloc(sv_code_capacity * sizeof(char*));
 		sv_code[sv_code_size++]="&";
 		sv_code[sv_code_size++]="&amp;";
 		sv_code[sv_code_size++]="<";
