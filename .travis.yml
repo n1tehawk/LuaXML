@@ -1,0 +1,43 @@
+#
+# Travis-CI configuration for LuaXML,
+# inspired by https://github.com/moteus/lua-travis-example
+#
+
+# assume C build environments
+language: c
+
+# Try multiple Lua implementations
+env:
+  matrix:
+    - LUA=lua5.1
+    - LUA=lua5.2
+    - LUA=lua5.3
+    - LUA=luajit
+    - LUA=luajit2.0
+    - LUA=luajit2.1
+  global:
+    - LUAROCKS=2.2.2
+
+# And use both gcc and clang
+compiler:
+  - gcc
+  - clang
+
+# 'bleeding edge' LuaJIT may fail without breaking the build
+matrix:
+  allow_failures:
+    - env: LUA=luajit2.0
+    - env: LUA=luajit2.1
+
+# Install dependencies
+install:
+  - source .travis/setenv_lua.sh
+  # fetch LuaUnit source file (framework for unit tests)
+  - wget https://github.com/n1tehawk/luaunit/raw/nitehawk/luaunit.lua
+
+# Build and test
+script:
+  # compile the C module using luarocks
+  - luarocks make luaxml-scm-0.rockspec CC=${CC} LD=${CC}
+  # run (Lua) tests
+  - make test LUA=lua
