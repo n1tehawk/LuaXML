@@ -25,11 +25,12 @@ function TestXml:test_basics()
 	lu.assertEquals(xml.str(true), "<boolean>true</boolean>\n")
 	lu.assertEquals(xml.str(123), "<number>123</number>\n")
 	lu.assertEquals(xml.str("bar"), "<string>bar</string>\n")
+	-- with setting the tag at the same time
+	lu.assertEquals(xml.str("bar", nil, "foo"), "<foo>bar</foo>\n")
 
-	-- construct new XML object in a piecemeal fashion, and call a method
-	foobar = {bar = false}
-	xml.tag(foobar, "foo")
-	lu.assertEquals(xml.new(foobar):str(), '<foo bar="false" />\n')
+	-- construct new XML object from scratch, and call a method
+	foobar = xml.new({bar = false}, "foo")
+	lu.assertEquals(foobar:str(), '<foo bar="false" />\n')
 
 	-- proper handling of an empty attribute
 	local foo = '<tag attr="" />\n'
@@ -38,8 +39,7 @@ function TestXml:test_basics()
 	lu.assertEquals(foobar:str(), foo)
 
 	-- encoding / decoding of special entities
-	foo = xml.new({"<&>"})
-	xml.tag(foo, "foo")
+	foo = xml.new({"<&>"}, "foo")
 	lu.assertEquals(foo:str(), "<foo>&lt;&amp;&gt;</foo>\n")
 	lu.assertEquals(xml.eval("<foo>&#x20;</foo>")[1], " ") -- hexadecimal
 	lu.assertEquals(xml.eval("<foo>&#032;</foo>")[1], " ")

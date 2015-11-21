@@ -12,56 +12,6 @@ that they are found in Lua's package search path.
 ]]--
 local xml = require("LuaXML_lib")
 
---- symbolic name for tag index, this allows accessing the tag by `var[xml.TAG]`
-xml.TAG = 0
-
---[[-- sets or returns tag of a LuaXML object.
-This method is just "syntactic sugar" (using a typical Lua term) that allows
-the writing of clearer code. LuaXML stores the tag value of an XML statement
-at table index 0, hence it can be simply accessed or altered by `var[0]` or
-`var[xml.TAG]` (the latter is just a symbolic name for the value 0). However,
-writing `var:tag()` for access or `var:tag("newTag")` for altering may be
-more self explanatory.
-
-@function tag
-@param var  the variable whose tag should be accessed, a LuaXML object
-@tparam ?string tag  the new tag to be set
-@return  the current tag as string
-]]--
-function xml.tag(var,tag)
-	if type(var)~="table" then return end
-	if type(tag)=="nil" then
-		return var[xml.TAG]
-	end
-	var[xml.TAG] = tag
-end
-
---[[-- creates a new LuaXML object.
-This is achieved either by setting the metatable of an existing Lua table, or
-by creating a new (empty) object and setting its tag.
-
-Note that it's not mandatory to use this function in order to treat a Lua table
-as LuaXML object. Setting the metatable just allows the usage of a more 
-object-oriented syntax (e.g. `xmlvar:str()` instead of `xml.str(xmlvar)`).
-XML objects created by `load` or `eval` automatically offer the
-object-oriented syntax.
-
-@function new
-@param arg  (optional) _(1)_ a table to be converted to a LuaXML object,
-or _(2)_ the tag of the new LuaXML object
-@return  new LuaXML object
-]]--
-function xml.new(arg)
-	if type(arg)=="table" then
-		setmetatable(arg,{__index=xml, __tostring=xml.str})
-		return arg
-	end
-	local var={}
-	setmetatable(var,{__index=xml, __tostring=xml.str})
-	if type(arg)=="string" then var[TAG]=arg end
-	return var
-end
-
 --[[-- appends a new subordinate LuaXML object to an existing one.
 optionally sets tag
 
@@ -92,7 +42,7 @@ function xml.str(var,indent,tagValue)
 	local tableStr=""
 
 	if type(var)=="table" then
-		local tag = var[0] or tagValue or type(var)
+		local tag = xml.tag(var) or tagValue or type(var)
 		local s = indentStr.."<"..tag
 		for k,v in pairs(var) do -- attributes
 			if type(k)=="string" then
@@ -120,7 +70,7 @@ function xml.str(var,indent,tagValue)
 		end
 		return s
 	else
-		local tag = type(var)
+		local tag = tagValue or type(var)
 		return indentStr.."<"..tag..">"..xml.encode(tostring(var)).."</"..tag..">\n"
 	end
 end
@@ -159,15 +109,9 @@ function xml.find(var, tag, key, value)
 	if type(key)~="string" or #key==0 then key=nil end
 	if type(value)=="string" and #value==0 then value=nil end
 	-- compare this table:
-	if tag~=nil then
-		if var[0]==tag and ( value == nil or var[key]==value ) then
-			setmetatable(var,{__index=xml, __tostring=xml.str})
-			return var
-		end
-	else
-		if value == nil or var[key]==value then
-			setmetatable(var,{__index=xml, __tostring=xml.str})
-			return var
+	if tag == nil or xml.tag(var) == tag then
+		if value == nil or var[key] == value then
+			return xml.new(var)
 		end
 	end
 	-- recursively parse subtags:

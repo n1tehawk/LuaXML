@@ -30,7 +30,6 @@
 <h2>Contents</h2>
 <ul>
 <li><a href="#Functions">Functions</a></li>
-<li><a href="#Fields">Fields</a></li>
 </ul>
 
 
@@ -82,8 +81,8 @@ matching the provided tag and attribute.</td>
 	<td class="summary">loads XML data from a file and returns it as table.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#new">new (arg)</a></td>
-	<td class="summary">creates a new LuaXML object.</td>
+	<td class="name" nowrap><a href="#new">new (arg, tag)</a></td>
+	<td class="summary">creates a LuaXML &ldquo;object&rdquo;, and optionally sets its tag.</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#registerCode">registerCode (decoded, encoded)</a></td>
@@ -101,13 +100,6 @@ and XML character entities.</td>
 	<tr>
 	<td class="name" nowrap><a href="#tag">tag (var, tag)</a></td>
 	<td class="summary">sets or returns tag of a LuaXML object.</td>
-	</tr>
-</table>
-<h2><a href="#Fields">Fields</a></h2>
-<table class="function_list">
-	<tr>
-	<td class="name" nowrap><a href="#xml.TAG">xml.TAG</a></td>
-	<td class="summary">symbolic name for tag index, this allows accessing the tag by <code>var[xml.TAG]</code></td>
 	</tr>
 </table>
 
@@ -272,12 +264,16 @@ Basically, this is just calling <a href="LuaXML.html#eval">eval</a>  on the give
 </dd>
     <dt>
     <a name = "new"></a>
-    <strong>new (arg)</strong>
+    <strong>new (arg, tag)</strong>
     </dt>
     <dd>
-    creates a new LuaXML object.
-This is achieved either by setting the metatable of an existing Lua table, or
-by creating a new (empty) object and setting its tag.</p>
+    creates a LuaXML &ldquo;object&rdquo;, and optionally sets its tag.
+The function either sets the metatable of an existing Lua table, or creates a
+new (empty) &ldquo;object&rdquo;. If you pass an optional<code> tag</code> string, it will be assigned
+to the result.</p>
+
+<p>(It&rsquo;s also possible to call this as <code>new(tag)</code>, which creates a new XML object
+with the given tag and is equivalent to <code>new({}, tag)</code>.)</p>
 
 <p>Note that it&rsquo;s not mandatory to use this function in order to treat a Lua table
 as LuaXML object. Setting the metatable just allows the usage of a more
@@ -289,15 +285,20 @@ object-oriented syntax.
     <h3>Parameters:</h3>
     <ul>
         <li><span class="parameter">arg</span>
-          (optional) <em>(1)</em> a table to be converted to a LuaXML object,
+         (optional)  <em>(1)</em> a table to be converted to a LuaXML object,
 or <em>(2)</em> the tag of the new LuaXML object
+        </li>
+        <li><span class="parameter">tag</span>
+            <span class="types">optional <a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          a tag value that will be assigned to the object
         </li>
     </ul>
 
     <h3>Returns:</h3>
     <ol>
 
-        new LuaXML object
+        LuaXML object, either newly created or the conversion of <code>arg</code>;
+optionally tagged as requested
     </ol>
 
 
@@ -411,10 +412,10 @@ Basically this simply exports the string representation <code>xml.str(var)</code
     sets or returns tag of a LuaXML object.
 This method is just &ldquo;syntactic sugar&rdquo; (using a typical Lua term) that allows
 the writing of clearer code. LuaXML stores the tag value of an XML statement
-at table index 0, hence it can be simply accessed or altered by <code>var[0]</code> or
-<code>var[xml.TAG]</code> (the latter is just a symbolic name for the value 0). However,
-writing <code>var:tag()</code> for access or <code>var:tag(&ldquo;newTag&rdquo;)</code> for altering may be
-more self explanatory.
+at table index 0, hence it can be simply accessed or altered by <code>var[0]</code>.
+However, writing <code>var:tag()</code> for access or <code>var:tag(&ldquo;newTag&rdquo;)</code> for altering
+may be more self explanatory (and future-proof in case LuaXML&rsquo;s tag handling
+should ever change).
 
 
     <h3>Parameters:</h3>
@@ -431,25 +432,10 @@ more self explanatory.
     <h3>Returns:</h3>
     <ol>
 
-        the current tag as string
+          If you have passed a new tag, the function will return <code>var</code> (with
+its tag changed); otherwise the result will be the current tag of <code>var</code>
+(normally a string).
     </ol>
-
-
-
-
-</dd>
-</dl>
-    <h2><a name="Fields"></a>Fields</h2>
-    <dl class="function">
-    <dt>
-    <a name = "xml.TAG"></a>
-    <strong>xml.TAG</strong>
-    </dt>
-    <dd>
-    symbolic name for tag index, this allows accessing the tag by <code>var[xml.TAG]</code>
-
-
-
 
 
 
