@@ -79,16 +79,20 @@ static void make_xml_object(lua_State *L, int index) {
 			__func__, index, lua_typename(L, lua_type(L, index)));
 
 	luaL_getmetatable(L, LUAXML_META);
-
-	lua_pushliteral(L, "__index");
-	lua_rawget(L, -2); // retrieve the actual module table
-	lua_pushliteral(L, "__tostring");
-	lua_pushliteral(L, "str");
-	lua_rawget(L, -3); // try to retrieve function via "str" key
-	lua_remove(L, -3);
-	lua_rawset(L, -3); // store function as __tostring metamethod
-
 	lua_setmetatable(L, index); // assign metatable
+}
+
+// push an indentation string for the given level to the Lua stack
+static void push_indentStr(lua_State *L, int level) {
+	if (level <= 0) {
+		lua_pushliteral(L, "");
+		return;
+	}
+	luaL_Buffer b;
+	luaL_buffinit(L, &b);
+	//while (level-- > 0) luaL_addlstring(&b, "  ", 2);
+	while (level-- > 0) luaL_addchar(&b, '\t'); // one TAB char per level
+	luaL_pushresult(&b);
 }
 
 /*
@@ -380,6 +384,56 @@ int Xml_new(lua_State *L) {
 	return 1;
 }
 
+// Push XML-encoded string for the Lua value at given index.
+// Will automatically use a tostring() conversion first, if necessary.
+static void Xml_pushEncode(lua_State *L, int index) {
+	if (index < 0) index += lua_gettop(L) + 1; // relative to absolute index
+	if (lua_type(L, index) == LUA_TSTRING)
+		lua_pushvalue(L, index); // already a string, just duplicate it
+	else {
+		lua_getglobal(L, "tostring");
+		lua_pushvalue(L, index); // duplicate value
+		lua_call(L, 1, 1); // tostring()
+	}
+
+	// encode special entities
+	size_t i;
+	for (i = 0; i < sv_code_size; i += 2) {
+		luaL_gsub(L, lua_tostring(L, -1), sv_code[i], sv_code[i + 1]);
+		lua_replace(L, -2);
+	}
+	// transfer string one character at a time, encoding any chars with MSB set
+	char buf[8];
+	const unsigned char *s = (unsigned char *)lua_tostring(L, -1);
+	luaL_Buffer b;
+	luaL_buffinit(L, &b);
+	while (*s) {
+		if (*s < 128)
+			luaL_addchar(&b, *s); // copy character literally
+		else {
+			i = snprintf(buf, sizeof(buf), "&#%d;", *s); // encode char
+			luaL_addlstring(&b, buf, i);
+		}
+		s++;
+	}
+	luaL_pushresult(&b);
+	lua_replace(L, -2); // (leaving the result on the stack)
+}
+
+/*
+// Push a string, then do XML conversion on it - result remains on top of stack.
+static void Xml_pushEncodeStr(lua_State *L, const char *s, int size) {
+	if (size == 0) {
+		lua_pushliteral(L, "");
+		return;
+	}
+	if (size < 0) size = strlen(s);
+	lua_pushlstring(L, s, size);
+	Xml_pushEncode(L, -1);
+	lua_replace(L, -2);
+}
+*/
+
 static void Xml_pushDecode(lua_State *L, const char *s, int size) {
 	if (size == 0) {
 		lua_pushliteral(L, "");
@@ -543,31 +597,176 @@ suitable XML encodings.
 @see registerCode
 */
 int Xml_encode(lua_State *L) {
-	if(lua_gettop(L)!=1)
-		return 0;
-	luaL_checkstring(L,-1);
-	// encode special entities
-	size_t i;
-	for(i=0; i<sv_code_size; i+=2) {
-		luaL_gsub(L, lua_tostring(L,-1), sv_code[i], sv_code[i+1]);
-		lua_remove(L,-2);
-	}
-	// transfer string one character at a time, encoding any chars with MSB set
-	char buf[8];
-	const unsigned char *s = (unsigned char *)lua_tostring(L, 1);
+	luaL_checkstring(L, 1); // make sure arg #1 is a string
+	Xml_pushEncode(L, 1); // and convert it
+	return 1;
+}
+
+/** converts any Lua value to an XML string.
+@function str
+
+@param value
+the value to be converted, normally a table (LuaXML object). However this
+function will 'encapsulate' other Lua values (of arbitrary type) in a way that
+should make them valid XML.
+<br>Note: Passing no `value` will cause the function to return `nil`.
+
+@tparam ?number indent
+indentation level for 'pretty' output. Mainly for internal use, defaults to 0.
+
+@tparam ?string tag
+the tag to be used in case `value` doesn't already have an 'implicit' tag.
+Mainly for internal use.
+
+@treturn string
+an XML string, or `nil` in case of errors.
+*/
+int Xml_str(lua_State *L) {
+	// Note:
+	// Be very careful about mixing Lua stack usage and buffer access here.
+	// The stack *must* be (re)balanced before accessing "b", i.e. any output
+	// should only occur at the same Lua stack level as the previous one!
 	luaL_Buffer b;
-	luaL_buffinit(L, &b);
-	while (*s) {
-		if (*s < 128)
-			luaL_addchar(&b, *s); // copy character literally
-		else {
-			snprintf(buf, sizeof(buf), "&#%d;", *s); // encode char
-			luaL_addstring(&b, buf);
+
+	lua_settop(L, 3);
+	int type = lua_type(L, 1); // type of "value"
+	if (type == LUA_TNIL) return 0;
+
+	if (type == LUA_TTABLE) {
+		push_TAG_key(L);
+		lua_rawget(L, 1); // retrieve tag entry from the table (may be `nil`)
+
+		// order of precedence: value[0], explicit tag string, Lua type name
+		const char *tag = lua_tostring(L, -1);
+		if (!tag) tag = lua_tostring(L, 3);
+		if (!tag) tag = lua_typename(L, type);
+
+		// Four elements already on stack: value, indent, tag, value[0]
+		// Use a string (#5) to manage (concatenate) simple attributes
+		lua_pushliteral(L, "");
+		// And a table (#6) to take care of (collect) 'extended' attributes
+		lua_newtable(L);
+		size_t table_attr = 0;
+
+		luaL_buffinit(L, &b);
+		push_indentStr(L, lua_tointeger(L, 2));
+		luaL_addvalue(&b);
+		luaL_addchar(&b, '<');
+		luaL_addstring(&b, tag);
+
+		// Iterate over string keys (= attributes)
+		lua_pushnil(L);
+		while (lua_next(L, 1)) {
+			// (k, v) pair on the stack
+			if (lua_type(L, -2) == LUA_TSTRING) {
+				// (the "_M" test here is to avoid recursion on module tables)
+				if (lua_istable(L, -1) && strcmp(lua_tostring(L, -2), "_M")) {
+					lua_pushcfunction(L, Xml_str);
+					lua_pushvalue(L, -2); // duplicate "v"
+					lua_pushinteger(L, lua_tointeger(L, 2) + 1); // indent + 1
+					lua_pushvalue(L, -4); // duplicate "k"
+					lua_call(L, 3, 1); // xml.str(v, indent + 1, k)
+					lua_rawseti(L, 6, ++table_attr); // append string to table
+				} else {
+					Xml_pushEncode(L, -1); // encode(tostring(v))
+					lua_pushfstring(L, "%s %s=\"%s\"", lua_tostring(L, 5),
+						lua_tostring(L, -3), lua_tostring(L, -1));
+					lua_replace(L, 5); // new attribute string
+					lua_pop(L, 1); // realign stack
+				}
+			}
+			lua_pop(L, 1); // pop <v>alue, leaving <k>ey for next iteration
 		}
-		s++;
+		// append "simple" attribute string to the output
+		if (lua_rawlen(L, 5) > 0) luaL_addstring(&b, lua_tostring(L, 5));
+
+		size_t count = lua_rawlen(L, 1); // number of "array" (sub)elements
+		if (count == 0 && table_attr == 0) {
+			// no sub-elements and no extended attr -> close tag and we're done
+			luaL_addlstring(&b, " />\n", 4);
+			luaL_pushresult(&b);
+			return 1;
+		}
+		luaL_addchar(&b, '>'); // close opening tag
+		if (count == 1 && table_attr == 0) {
+			// single subelement, no extended attributes
+			lua_rawgeti(L, 1, 1); // value[1]
+			if (!lua_istable(L, -1)) {
+				// output as single string, then close tag
+				Xml_pushEncode(L, -1); // encode(tostring(value[1]))
+				lua_replace(L, -2);
+				luaL_addvalue(&b); // add and pop
+				luaL_addlstring(&b, "</", 2);
+				luaL_addstring(&b, tag);
+				luaL_addlstring(&b, ">\n", 2);
+				luaL_pushresult(&b);
+				return 1;
+			}
+			lua_pop(L, 1); // discard (table) value, to realign stack
+		}
+		luaL_addchar(&b, '\n');
+
+		// Loop over all the sub-elements, placing each on a separate line
+		size_t k;
+		for (k = 1; k <= count; k++) {
+#if LUA_VERSION_NUM < 503
+			lua_rawgeti(L, 1, k);
+			type = lua_type(L, -1);
+#else
+			type = lua_rawgeti(L, 1, k); // (Lua 5.3 returns type directly)
+#endif
+			if (type == LUA_TSTRING) {
+				push_indentStr(L, lua_tointeger(L, 2) + 1); // indentation
+				Xml_pushEncode(L, -2);
+				lua_remove(L, -3);
+				lua_pushliteral(L, "\n");
+				lua_concat(L, 3);
+			} else {
+				lua_pushcfunction(L, Xml_str);
+				lua_insert(L, -2); // place function before value
+				lua_pushinteger(L, lua_tointeger(L, 2) + 1); // indent + 1
+				lua_call(L, 2, 1); // xml.str(v, indent + 1)
+			}
+			luaL_addvalue(&b); // add (string) to output, pop from stack
+		}
+
+		// Finally we'll take care of the "extended" (table-type) attributes.
+		// The output is appended after the regular sub-elements, in order
+		// not to affect their numbering.
+		// Just process the corresponding table, concatenating all entries:
+		for (k = 1; k <= table_attr; k++) {
+			lua_rawgeti(L, 6, k);
+			luaL_addvalue(&b);
+		}
+
+		// closing tag
+		push_indentStr(L, lua_tointeger(L, 2));
+		luaL_addvalue(&b);
+		luaL_addlstring(&b, "</", 2);
+		luaL_addstring(&b, tag);
+		luaL_addlstring(&b, ">\n", 2);
+
+		luaL_pushresult(&b);
+		return 1;
 	}
+
+	// Getting here means a "flat" Lua value, format to XML as a single string
+	const char *tag = lua_tostring(L, 3);
+	if (!tag) tag = lua_typename(L, type); // use either tag or the type name
+	luaL_buffinit(L, &b);
+	push_indentStr(L, lua_tointeger(L, 2));
+	luaL_addvalue(&b);
+	luaL_addchar(&b, '<');
+	luaL_addstring(&b, tag);
+	luaL_addchar(&b, '>');
+
+	Xml_pushEncode(L, 1); // encode(tostring(value))
+	luaL_addvalue(&b);
+
+	luaL_addlstring(&b, "</", 2);
+	luaL_addstring(&b, tag);
+	luaL_addlstring(&b, ">\n", 2);
 	luaL_pushresult(&b);
-	lua_remove(L,-2);
 	return 1;
 }
 
@@ -581,6 +780,7 @@ int _EXPORT luaopen_LuaXML_lib (lua_State* L) {
 		{"load", Xml_load},
 		{"eval", Xml_eval},
 		{"encode", Xml_encode},
+		{"str", Xml_str},
 		{"registerCode", Xml_registerCode},
 		{NULL, NULL}
 	};
@@ -591,6 +791,9 @@ int _EXPORT luaopen_LuaXML_lib (lua_State* L) {
 	lua_pushliteral(L, "__index");
 	lua_pushvalue(L, -3); // duplicate the module table
 	lua_rawset(L, -3); // and set it as metaindex
+	lua_pushliteral(L, "__tostring");
+	lua_pushcfunction(L, Xml_str);
+	lua_rawset(L, -3); // set metamethod
 	lua_pop(L, 1); // drop value (metatable)
 
 	// register default codes:
