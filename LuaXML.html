@@ -94,8 +94,8 @@ and XML character entities.</td>
 	<td class="summary">saves a Lua var as XML file.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#str">str (var, indent, tag)</a></td>
-	<td class="summary">converts any Lua var to an XML string.</td>
+	<td class="name" nowrap><a href="#str">str (value, indent, tag)</a></td>
+	<td class="summary">converts any Lua value to an XML string.</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#tag">tag (var, tag)</a></td>
@@ -372,24 +372,28 @@ Basically this simply exports the string representation <code>xml.str(var)</code
 </dd>
     <dt>
     <a name = "str"></a>
-    <strong>str (var, indent, tag)</strong>
+    <strong>str (value, indent, tag)</strong>
     </dt>
     <dd>
-    converts any Lua var to an XML string.
+    converts any Lua value to an XML string.
 
 
     <h3>Parameters:</h3>
     <ul>
-        <li><span class="parameter">var</span>
-          the variable to be converted, normally a table
+        <li><span class="parameter">value</span>
+        the value to be converted, normally a table (LuaXML object). However this
+function will &lsquo;encapsulate&rsquo; other Lua values (of arbitrary type) in a way that
+should make them valid XML.
+<br>Note: Passing no <code>value</code> will cause the function to return <code>nil</code>.
         </li>
         <li><span class="parameter">indent</span>
             <span class="types">optional <span class="type">number</span></span>
-          the current level of indentation for pretty output. Mainly for internal use.
+        indentation level for &lsquo;pretty&rsquo; output. Mainly for internal use, defaults to 0.
         </li>
         <li><span class="parameter">tag</span>
             <span class="types">optional <a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-          the tag to be used for a table without tag. Mainly for internal use.
+        the tag to be used in case <code>value</code> doesn&rsquo;t already have an &lsquo;implicit&rsquo; tag.
+Mainly for internal use.
         </li>
     </ul>
 
@@ -397,7 +401,7 @@ Basically this simply exports the string representation <code>xml.str(var)</code
     <ol>
 
            <span class="types"><a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-        an XML string, or <code>nil</code> in case of errors
+        an XML string, or <code>nil</code> in case of errors.
     </ol>
 
 

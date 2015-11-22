@@ -27,54 +27,6 @@ function xml.append(var,tag)
 	return newVar
 end
 
---[[-- converts any Lua var to an XML string.
-@function str
-@param var  the variable to be converted, normally a table
-@tparam ?number indent  the current level of indentation for pretty output. Mainly for internal use.
-@tparam ?string tag  the tag to be used for a table without tag. Mainly for internal use.
-@treturn string  an XML string, or `nil` in case of errors
-]]--
-function xml.str(var,indent,tagValue)
-	if type(var)=="nil" then return end
-	local indent = indent or 0
-	local indentStr=""
-	for i = 1,indent do indentStr=indentStr.."	" end
-	local tableStr=""
-
-	if type(var)=="table" then
-		local tag = xml.tag(var) or tagValue or type(var)
-		local s = indentStr.."<"..tag
-		for k,v in pairs(var) do -- attributes
-			if type(k)=="string" then
-				if type(v)=="table" and k~="_M" then -- otherwise recursiveness imminent
-					tableStr = tableStr..xml.str(v,indent+1,k)
-				else
-					s = s.." "..k.."=\""..xml.encode(tostring(v)).."\""
-				end
-			end
-		end
-		if #var==0 and #tableStr==0 then
-			s = s.." />\n"
-		elseif #var==1 and type(var[1])~="table" and #tableStr==0 then -- single element
-			s = s..">"..xml.encode(tostring(var[1])).."</"..tag..">\n"
-		else
-			s = s..">\n"
-			for k,v in ipairs(var) do -- elements
-				if type(v)=="string" then
-					s = s..indentStr.."	"..xml.encode(v).." \n"
-				else
-					s = s..xml.str(v,indent+1)
-				end
-			end
-			s=s..tableStr..indentStr.."</"..tag..">\n"
-		end
-		return s
-	else
-		local tag = tagValue or type(var)
-		return indentStr.."<"..tag..">"..xml.encode(tostring(var)).."</"..tag..">\n"
-	end
-end
-
 --[[-- saves a Lua var as XML file.
 Basically this simply exports the string representation `xml.str(var)`
 (or `var:str()`), plus a standard header.
