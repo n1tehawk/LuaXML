@@ -90,7 +90,7 @@ matching the provided tag and attribute.</td>
 and XML character entities.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#save">save (var, filename)</a></td>
+	<td class="name" nowrap><a href="#save">save (var, filename, filemode)</a></td>
 	<td class="summary">saves a Lua var as XML file.</td>
 	</tr>
 	<tr>
@@ -346,7 +346,7 @@ this function.
 </dd>
     <dt>
     <a name = "save"></a>
-    <strong>save (var, filename)</strong>
+    <strong>save (var, filename, filemode)</strong>
     </dt>
     <dd>
     saves a Lua var as XML file.
@@ -362,6 +362,10 @@ Basically this simply exports the string representation <code>xml.str(var)</code
         <li><span class="parameter">filename</span>
             <span class="types"><a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
           the filename to be used. An existing file of the same name gets overwritten.
+        </li>
+        <li><span class="parameter">filemode</span>
+            <span class="types">optional <a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          the file mode to pass to <a href="http://www.lua.org/manual/5.1/manual.html#pdf-io.open">io.open</a> , defaults to &ldquo;w&rdquo;
         </li>
     </ul>
 
