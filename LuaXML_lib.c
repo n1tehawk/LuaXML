@@ -107,7 +107,19 @@ void Tokenizer_delete(Tokenizer* tok) {
 	free(tok);
 }
 
-//void Tokenizer_print(Tokenizer* tok) { printf("  @%u %s\n", tok->i, !tok->m_token ? "(null)" : (tok->m_token[0]==ESC)?"(esc)" : (tok->m_token[0]==OPN)?"(open)": (tok->m_token[0]==CLS)?"(close)" : tok->m_token); fflush(stdout); }
+#if LUAXML_DEBUG
+void Tokenizer_print(Tokenizer *tok) {
+	printf("  @%u %s\n", tok->i,
+		!tok->m_token ? "(null)" :
+		(tok->m_token[0] == ESC) ? "(esc)" :
+		(tok->m_token[0] == OPN) ? "(open)" :
+		(tok->m_token[0] == CLS) ? "(close)" :
+		tok->m_token);
+	fflush(stdout);
+}
+#else
+# define Tokenizer_print(tok)	/* ignore */
+#endif
 
 static const char* Tokenizer_set(Tokenizer* tok, const char* s, size_t size) {
 	if(!size||!s) return 0;
@@ -116,7 +128,7 @@ static const char* Tokenizer_set(Tokenizer* tok, const char* s, size_t size) {
 	strncpy(tok->m_token,s, size);
 	tok->m_token[size] = 0;
 	tok->m_token_size = tok->m_token_capacity = size;
-	//Tokenizer_print(tok);
+	Tokenizer_print(tok);
 	return tok->m_token;
 }
 
@@ -231,7 +243,7 @@ const char* Tokenizer_next(Tokenizer* tok) {
 			if(tok->m_token_size) break;
 		}
 	}
-	//Tokenizer_print(tok);
+	Tokenizer_print(tok);
 	return tok->m_token;
 }
 

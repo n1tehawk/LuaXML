@@ -1,6 +1,10 @@
 #ifndef LUAXML_LIB_H
 #define LUAXML_LIB_H
 
+#ifndef LUAXML_DEBUG
+# define LUAXML_DEBUG	0 /* set to 1 to enable debugging output */
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
