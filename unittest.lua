@@ -41,6 +41,7 @@ function TestXml:test_basics()
 	foo = xml.new({"<&>"})
 	xml.tag(foo, "foo")
 	lu.assertEquals(foo:str(), "<foo>&lt;&amp;&gt;</foo>\n")
+	lu.assertEquals(xml.eval("<foo>&#x20;</foo>")[1], " ") -- hexadecimal
 	lu.assertEquals(xml.eval("<foo>&#032;</foo>")[1], " ")
 	lu.assertEquals(xml.eval("<bar>&#32;</bar>")[1], " ")
 	lu.assertEquals(xml.eval("<foobar>&apos;&#9;&apos;</foobar>")[1], "'\t'")

@@ -58,6 +58,28 @@ static size_t find(const char* s, const char* pattern, size_t start) {
 	return found ? found-s : strlen(s);
 }
 
+/*
+ * Lua C function to replace a gsub() match with the corresponding character.
+ * Xml_pushDecode() will use this as a replacement function argument to undo
+ * the XML encodings, passing one match (sequence of digits) at a time.
+ *
+ * Due to the pattern used, the matched string may also be 'x' followed by
+ * a sequence of hexadecimal characters ("xE4"), which is supported too.
+ */
+static int XMLencoding_replacement(lua_State *L) {
+	const char *matched = lua_tostring(L, 1);
+	if (matched) {
+		// support both decimal and hexadecimal conversion
+		char c = *matched == 'x' ? strtol(++matched, NULL, 16) : atoi(matched);
+		if (c) {
+			lua_pushlstring(L, &c, 1); // return character as Lua string
+			return 1;
+		} // c == 0 probably indicates conversion failure, return `nil`
+	}
+	return 0;
+}
+
+
 // control chars used by the Tokenizer to denote special meanings
 #define ESC	27	/* end of scope, closing tag */
 #define OPN	28	/* "open", start of tag */
@@ -249,32 +271,22 @@ static char** sv_code=0;
 
 //--- public methods -----------------------------------------------
 
-static void Xml_pushDecode(lua_State* L, const char* s, size_t s_size) {
-	if(!s_size)
-		s_size=strlen(s);
-	luaL_Buffer b;
-	luaL_buffinit(L, &b);
-	const char* found = strstr(s, "&#");
-	size_t start=0, pos = found ? found-s : s_size;
-	while(found) {
-		char ch = 0;
-		size_t i=0;
-		for(found += 2; i<3; ++i, ++found)
-			if(isdigit(*found))
-				ch = ch * 10 + (*found - 48);
-			else break;
-		if(*found == ';') {
-			if(pos>start)
-				luaL_addlstring(&b, s+start, pos-start);
-			luaL_addchar(&b, ch);
-			start = pos + 3 + i;
-		}
-		found = strstr(found+1, "&#");
-		pos = found ? found-s : s_size;
+static void Xml_pushDecode(lua_State *L, const char *s, int size) {
+	if (size == 0) {
+		lua_pushliteral(L, "");
+		return;
 	}
-	if(pos>start)
-		luaL_addlstring(&b,s+start, pos-start);
-	luaL_pushresult(&b);
+	if (size < 0) size = strlen(s);
+
+	// try a gsub() substition of decimal and hexadecimal character encodings
+	lua_pushlstring(L, s, size); // initial string
+	lua_pushliteral(L, "gsub");
+	lua_gettable(L, -2); // using string as object, retrieve the "gsub" function
+	lua_insert(L, -2); // swap with function, making string the arg #1
+	lua_pushliteral(L, "&#(x?%x+);"); // pattern for XML encodings (arg #2)
+	lua_pushcfunction(L, XMLencoding_replacement); // replacement func (arg #3)
+	lua_call(L, 3, 1); // three parameters, one result (the substituted string)
+
 	size_t i;
 	for(i=sv_code_size-1; i<sv_code_size; i-=2) {
 		luaL_gsub(L, lua_tostring(L,-1), sv_code[i], sv_code[i-1]);
@@ -338,9 +350,7 @@ int Xml_eval(lua_State *L) {
 			if(token[sepPos]) { // regular attribute
 				const char* aVal =token+sepPos+2;
 				lua_pushlstring(L, token, sepPos);
-				size_t lenVal = strlen(aVal)-1;
-				if(!lenVal) Xml_pushDecode(L, "", 0);
-				else Xml_pushDecode(L, aVal, lenVal);
+				Xml_pushDecode(L, aVal, strlen(aVal) - 1);
 				lua_rawset(L, -3);
 			}
 		}
@@ -355,7 +365,7 @@ int Xml_eval(lua_State *L) {
 	}
 	else { // read elements
 		if (lua_gettop(L)) {
-			Xml_pushDecode(L, token, 0);
+			Xml_pushDecode(L, token, -1);
 			lua_rawseti(L, -2, lua_rawlen(L, -2) + 1);
 		}
 		else // stack is empty, i.e. we encountered the token *before* any tag
