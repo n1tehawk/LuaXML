@@ -81,6 +81,10 @@ matching the provided tag and attribute.</td>
 	<td class="summary">loads XML data from a file and returns it as table.</td>
 	</tr>
 	<tr>
+	<td class="name" nowrap><a href="#match">match (var, tag, key, value)</a></td>
+	<td class="summary">match XML entity against given (optional) criteria.</td>
+	</tr>
+	<tr>
 	<td class="name" nowrap><a href="#new">new (arg, tag)</a></td>
 	<td class="summary">creates a LuaXML &ldquo;object&rdquo;, and optionally sets its tag.</td>
 	</tr>
@@ -260,6 +264,73 @@ Basically, this is just calling <a href="LuaXML.html#eval">eval</a>  on the give
 
 
 
+
+</dd>
+    <dt>
+    <a name = "match"></a>
+    <strong>match (var, tag, key, value)</strong>
+    </dt>
+    <dd>
+    match XML entity against given (optional) criteria.
+Passing <code>nil</code> for one of the<code> tag</code>, <code>key</code>, or <code>value</code> parameters means &ldquo;don&rsquo;t
+care&rdquo; (i.e. match anything for that particular aspect). So for example</p>
+
+<pre><code>var:match(nil, "text", nil)
+-- or shorter, but identical:  var:match(nil, "text")
+</code></pre>
+
+<p>will look for an XML attribute (name) &ldquo;text&rdquo; to be present in <code>var</code>, but won&rsquo;t
+consider its value or the tag of <code>var</code>.</p>
+
+<p>Note: If you want to test for a specific attribute <code>value</code>, so also have to
+supply a <code>key</code> &ndash; otherwise <code>value</code> will be ignored.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">var</span>
+        the variable to test, normally a Lua table or LuaXML object. (If <code>var</code> is not
+a table type, the test always fails.)
+        </li>
+        <li><span class="parameter">tag</span>
+            <span class="types">optional <a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+        If set, has to match the XML <a href="LuaXML.html#tag">tag</a>  (i.e. must be equal to the <code>tag(var, nil)</code>
+result)
+        </li>
+        <li><span class="parameter">key</span>
+            <span class="types">optional <a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+        If set, a corresponding <strong>attribute key</strong> needs to be present (exact name match).
+        </li>
+        <li><span class="parameter">value</span>
+         (optional)
+arbitrary Lua value. If set, the <strong>attribute value</strong> for <code>key</code> has to match it.
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        either <code>nil</code> for no match; or the <code>var</code> argument properly converted to a
+LuaXML object, equivalent to <code>xml.new(var)</code>.</p>
+
+<p>This allows you to either make direct use of the matched LuaXML object, or to
+use the return value in a boolean test (<code>if xml.match(&hellip;)</code>), which is a common
+Lua idiom.
+    </ol>
+
+
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example">
+<span class="comment">-- each of these will either return <code>x</code>, or <code>nil</code> in case of no match
+</span>
+x:match(<span class="string">"foo"</span>) <span class="comment">-- test for x:tag() == "foo"
+</span>x:match(<span class="keyword">nil</span>, <span class="string">"bar"</span>) <span class="comment">-- test if x has a "bar" attribute
+</span>x:match(<span class="keyword">nil</span>, <span class="string">"foo"</span>, <span class="string">"bar"</span>) <span class="comment">-- test if x has a "foo" attribute that equals "bar"
+</span>x:match(<span class="string">"foobar"</span>, <span class="string">"foo"</span>, <span class="string">"bar"</span>) <span class="comment">-- test for "foobar" tag, and attr "foo" == "bar"
+</span></pre>
+    </ul>
 
 </dd>
     <dt>
