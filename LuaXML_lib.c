@@ -46,6 +46,11 @@ THE SOFTWARE.
 		luaL_register(L, NULL, funcs); \
 	} while (0)
 
+#else
+
+	// lua_compare() has replaced lua_equal()
+	#define lua_equal(L, index1, index2)	lua_compare(L, index1, index2, LUA_OPEQ)
+
 #endif
 
 
@@ -770,6 +775,72 @@ int Xml_str(lua_State *L) {
 	return 1;
 }
 
+/** match XML entity against given (optional) criteria.
+Passing `nil` for one of the` tag`, `key`, or `value` parameters means "don't
+care" (i.e. match anything for that particular aspect). So for example
+	var:match(nil, "text", nil)
+	-- or shorter, but identical:  var:match(nil, "text")
+will look for an XML attribute (name) "text" to be present in `var`, but won't
+consider its value or the tag of `var`.
+
+Note: If you want to test for a specific attribute `value`, so also have to
+supply a `key` - otherwise `value` will be ignored.
+
+@usage
+-- each of these will either return `x`, or `nil` in case of no match
+
+x:match("foo") -- test for x:tag() == "foo"
+x:match(nil, "bar") -- test if x has a "bar" attribute
+x:match(nil, "foo", "bar") -- test if x has a "foo" attribute that equals "bar"
+x:match("foobar", "foo", "bar") -- test for "foobar" tag, and attr "foo" == "bar"
+
+@function match
+
+@param var
+the variable to test, normally a Lua table or LuaXML object. (If `var` is not
+a table type, the test always fails.)
+
+@tparam ?string tag
+If set, has to match the XML `tag` (i.e. must be equal to the `tag(var, nil)`
+result)
+
+@tparam ?string key
+If set, a corresponding **attribute key** needs to be present (exact name match).
+
+@param value (optional)
+arbitrary Lua value. If set, the **attribute value** for `key` has to match it.
+
+@return
+either `nil` for no match; or the `var` argument properly converted to a
+LuaXML object, equivalent to `xml.new(var)`.
+
+This allows you to either make direct use of the matched LuaXML object, or to
+use the return value in a boolean test (`if xml.match(...)`), which is a common
+Lua idiom.
+*/
+int Xml_match(lua_State *L) {
+	if (lua_type(L, 1) == LUA_TTABLE) {
+		if (!lua_isnoneornil(L, 2)) {
+			push_TAG_key(L);
+			lua_rawget(L, 1); // get the tag value from var
+			if (!lua_equal(L, -1, 2)) return 0; // tag mismatch, return `nil`
+			lua_pop(L, 1); // realign stack
+		}
+		if (lua_type(L, 3) == LUA_TSTRING) {
+			lua_pushvalue(L, 3); // duplicate attribute key
+			lua_rawget(L, 1); // try to get value from var
+			if (lua_isnil(L, -1)) return 0; // no such attribute
+			if (!lua_isnoneornil(L, 4)) {
+				if (!lua_equal(L, -1, 4)) return 0; // attribute value mismatch
+			}
+		}
+		lua_settop(L, 1);
+		make_xml_object(L, 1);
+		return 1;
+	}
+	return 0;
+}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -781,6 +852,7 @@ int _EXPORT luaopen_LuaXML_lib (lua_State* L) {
 		{"eval", Xml_eval},
 		{"encode", Xml_encode},
 		{"str", Xml_str},
+		{"match", Xml_match},
 		{"registerCode", Xml_registerCode},
 		{NULL, NULL}
 	};
