@@ -64,6 +64,10 @@ that they are found in Lua&rsquo;s package search path.</p>
 	<td class="summary">appends a new subordinate LuaXML object to an existing one.</td>
 	</tr>
 	<tr>
+	<td class="name" nowrap><a href="#children">children (var, tag, key, value, maxdepth)</a></td>
+	<td class="summary">iterate subelements (&ldquo;XML children&rdquo;) as <em>key &ndash; value</em> pairs.</td>
+	</tr>
+	<tr>
 	<td class="name" nowrap><a href="#encode">encode (str)</a></td>
 	<td class="summary">converts a string to XML encoding.</td>
 	</tr>
@@ -75,6 +79,11 @@ that they are found in Lua&rsquo;s package search path.</p>
 	<td class="name" nowrap><a href="#find">find (var, tag, key, value)</a></td>
 	<td class="summary">recursively searches a Lua table for a subelement
 matching the provided tag and attribute.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#iterate">iterate (var, cb, tag, key, value, r, max, d)</a></td>
+	<td class="summary">iterates a LuaXML object,
+invoking a callback function for all matching (sub)elements.</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#load">load (filename)</a></td>
@@ -144,6 +153,90 @@ optionally sets tag
 
 </dd>
     <dt>
+    <a name = "children"></a>
+    <strong>children (var, tag, key, value, maxdepth)</strong>
+    </dt>
+    <dd>
+    iterate subelements (&ldquo;XML children&rdquo;) as <em>key &ndash; value</em> pairs.
+This function is meant to be called in a generic <code>for</code> loop, similar to what
+<code>ipairs(var)</code> would do. However you can easily specify additional criteria
+to <a href="LuaXML.html#match">match</a>  against here, possibly reducing the overhead needed to test for
+specific subelements.</p>
+
+<p>For the resulting <code>(k, v)</code> pairs, note that <code>k</code> is just a sequential number
+in the array of matched child elements, and has no direct relation to the
+actual &ldquo;position&rdquo; (subtag index) within each <code>v</code>&rsquo;s parent object.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">var</span>
+          the table (LuaXML object) to work on
+        </li>
+        <li><span class="parameter">tag</span>
+            <span class="types">optional <a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          XML tag to be matched
+        </li>
+        <li><span class="parameter">key</span>
+            <span class="types">optional <a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          attribute key to be matched
+        </li>
+        <li><span class="parameter">value</span>
+          (optional) attribute value to be matched
+        </li>
+        <li><span class="parameter">maxdepth</span>
+            <span class="types">optional <span class="type">number</span></span>
+        maximum depth allowed, defaults to 1 (only immediate children).
+You can pass 0 or <code>true</code> to iterate <em>all</em> children recursively.
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+         Lua iterator function and initial state (Lua-internal use) &ndash; suitable
+for a <code>for</code> loop
+    </ol>
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="LuaXML.html#match">match</a>
+    </ul>
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example">
+<span class="keyword">local</span> xml = <span class="global">require</span>(<span class="string">"LuaXML"</span>)
+<span class="keyword">local</span> foobar = xml.eval(<span class="string">'&lt;foo&gt;&lt;a /&gt;&lt;b bar="no" /&gt;&lt;c bar="yes" /&gt;&lt;a /&gt;&lt;/foo&gt;'</span>)
+
+<span class="comment">-- iterate over those children that have a "bar" attribute:
+</span><span class="keyword">for</span> k, v <span class="keyword">in</span> foobar:children(<span class="keyword">nil</span>, <span class="string">"bar"</span>) <span class="keyword">do</span>
+	<span class="global">print</span>(k, v:tag(), v.bar)
+<span class="keyword">end</span>
+<span class="comment">-- will print
+</span><span class="comment">-- 1       b       no
+</span><span class="comment">-- 2       c       yes
+</span>
+<span class="comment">-- require "bar" to be "yes":
+</span><span class="keyword">for</span> k, v <span class="keyword">in</span> foobar:children(<span class="keyword">nil</span>, <span class="string">"bar"</span>, <span class="string">"yes"</span>) <span class="keyword">do</span>
+	<span class="global">print</span>(k, v:tag(), v.bar)
+<span class="keyword">end</span>
+<span class="comment">-- will print
+</span><span class="comment">-- 1       c       yes
+</span>
+<span class="comment">-- iterate "a" tags: (the first and fourth child will match)
+</span><span class="keyword">for</span> k, v <span class="keyword">in</span> foobar:children(<span class="string">"a"</span>) <span class="keyword">do</span>
+	<span class="global">print</span>(k, v:tag(), v.bar)
+<span class="keyword">end</span>
+<span class="comment">-- will print
+</span><span class="comment">-- 1       a       nil
+</span><span class="comment">-- 2       a       nil
+</span></pre>
+    </ul>
+
+</dd>
+    <dt>
     <a name = "encode"></a>
     <strong>encode (str)</strong>
     </dt>
@@ -208,7 +301,8 @@ suitable XML encodings.
     </dt>
     <dd>
     recursively searches a Lua table for a subelement
-matching the provided tag and attribute.
+matching the provided tag and attribute.  See the description of <a href="LuaXML.html#match">match</a>  for
+the logic involved with testing for<code> tag</code>, <code>key</code> and <code>value</code>.
 
 
     <h3>Parameters:</h3>
@@ -232,10 +326,81 @@ matching the provided tag and attribute.
     <h3>Returns:</h3>
     <ol>
 
-        the first (sub-)table which matches the search condition, or <code>nil</code>
+        the first (sub-)table that satisfies the search condition,
+or <code>nil</code> for no match
     </ol>
 
 
+
+
+</dd>
+    <dt>
+    <a name = "iterate"></a>
+    <strong>iterate (var, cb, tag, key, value, r, max, d)</strong>
+    </dt>
+    <dd>
+    iterates a LuaXML object,
+invoking a callback function for all matching (sub)elements. </p>
+
+<p>The iteration starts with the variable <code>var</code> itself (= default depth 0).
+A callback function <code>cb</code> gets invoked for each <a href="LuaXML.html#match">match</a> , depending on the
+specified criteria. If the <code>r</code> flag is set, the process will repeat
+<strong>recursively</strong> for the subelements of <code>var</code> (at depth + 1). You can limit
+the scope by setting a maximum depth, or have the callback function
+explicitly request to stop the iteration (by returning <code>false</code>).
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">var</span>
+          the table (LuaXML object) to iterate
+        </li>
+        <li><span class="parameter">cb</span>
+            <span class="types"><span class="type">function</span></span>
+        callback function. <code>callback(var, depth)</code> will be called for each matching
+element.<br>
+The function may return <code>false</code> to request a stop; if its result is
+any other value (including <code>nil</code>), the iteration will continue.
+        </li>
+        <li><span class="parameter">tag</span>
+            <span class="types">optional <a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          XML tag to be matched
+        </li>
+        <li><span class="parameter">key</span>
+            <span class="types">optional <a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          attribute key to be matched
+        </li>
+        <li><span class="parameter">value</span>
+          (optional) attribute value to be matched
+        </li>
+        <li><span class="parameter">r</span>
+            <span class="types">optional <span class="type">boolean</span></span>
+        recursive operation. If <code>true</code>, also iterate over the subelements of <code>var</code>
+        </li>
+        <li><span class="parameter">max</span>
+            <span class="types">optional <span class="type">number</span></span>
+          maximum depth allowed
+        </li>
+        <li><span class="parameter">d</span>
+            <span class="types">optional <span class="type">number</span></span>
+          initial depth value, defaults to 0
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        The function returns two values: a counter representing the number of elements
+that were successfully matched (and processed), and a boolean completion flag.
+The latter is <code>true</code> for an exhaustive iteration, and <code>false</code> if was stopped
+from the callback.
+    </ol>
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="LuaXML.html#match">match</a>
+    </ul>
 
 
 </dd>
