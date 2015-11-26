@@ -45,47 +45,178 @@ function _M.save(var, filename, filemode)
 	io.close(file)
 end
 
+--[[-- iterates a LuaXML object,
+invoking a callback function for all matching (sub)elements.
+
+The iteration starts with the variable `var` itself (= default depth 0).
+A callback function `cb` gets invoked for each `match`, depending on the
+specified criteria. If the `r` flag is set, the process will repeat
+**recursively** for the subelements of `var` (at depth + 1). You can limit
+the scope by setting a maximum depth, or have the callback function
+explicitly request to stop the iteration (by returning `false`).
+
+@function iterate
+
+@param var  the table (LuaXML object) to iterate
+
+@tparam function cb
+callback function. `callback(var, depth)` will be called for each matching
+element.<br>
+The function may return `false` to request a stop; if its result is
+any other value (including `nil`), the iteration will continue.
+
+@tparam ?string tag  XML tag to be matched
+@tparam ?string key  attribute key to be matched
+@param value  (optional) attribute value to be matched
+
+@tparam ?boolean r
+recursive operation. If `true`, also iterate over the subelements of `var`
+
+@tparam ?number max  maximum depth allowed
+@tparam ?number d  initial depth value, defaults to 0
+
+@return
+The function returns two values: a counter representing the number of elements
+that were successfully matched (and processed), and a boolean completion flag.
+The latter is `true` for an exhaustive iteration, and `false` if was stopped
+from the callback.
+
+@see match
+]]--
+function _M.iterate(var, callback, tag, key, value, recursive, maxdepth, depth)
+	if type(callback) ~= "function" then
+		error("iterate() requires a function type as 'callback' parameter")
+	end
+	depth = depth or 0
+	local count, continue = 0, true
+	-- examine "var" element first
+	if _M.match(var, tag, key, value) then
+		count = 1
+		continue = callback(var, depth)
+	end
+	if recursive and (continue ~= false) and (type(var) == "table") then
+		-- process "children" / sub-elements
+		depth = depth + 1
+		if maxdepth == nil or depth <= maxdepth then
+			for k, v in ipairs(var) do
+				local done, continue = _M.iterate(v, callback, tag,
+					key, value, true, maxdepth, depth)
+				count = count + done
+				if continue == false then
+					-- (explicit request from callback to stop iteration)
+					return count, false
+				end
+			end
+		end
+	end
+	return count, true -- (iteration complete)
+end
+
+--[[-- iterate subelements ("XML children") as _key - value_ pairs.
+This function is meant to be called in a generic `for` loop, similar to what
+`ipairs(var)` would do. However you can easily specify additional criteria
+to `match` against here, possibly reducing the overhead needed to test for
+specific subelements.
+
+For the resulting `(k, v)` pairs, note that `k` is just a sequential number
+in the array of matched child elements, and has no direct relation to the
+actual "position" (subtag index) within each `v`'s parent object.
+
+@function children
+
+@param var  the table (LuaXML object) to work on
+@tparam ?string tag  XML tag to be matched
+@tparam ?string key  attribute key to be matched
+@param value  (optional) attribute value to be matched
+
+@tparam ?number maxdepth
+maximum depth allowed, defaults to 1 (only immediate children).
+You can pass 0 or `true` to iterate _all_ children recursively.
+
+@return Lua iterator function and initial state (Lua-internal use) - suitable
+for a `for` loop
+
+@see match
+
+@usage
+local xml = require("LuaXML")
+local foobar = xml.eval('<foo><a /><b bar="no" /><c bar="yes" /><a /></foo>')
+
+-- iterate over those children that have a "bar" attribute:
+for k, v in foobar:children(nil, "bar") do
+	print(k, v:tag(), v.bar)
+end
+-- will print
+-- 1       b       no
+-- 2       c       yes
+
+-- require "bar" to be "yes":
+for k, v in foobar:children(nil, "bar", "yes") do
+	print(k, v:tag(), v.bar)
+end
+-- will print
+-- 1       c       yes
+
+-- iterate "a" tags: (the first and fourth child will match)
+for k, v in foobar:children("a") do
+	print(k, v:tag(), v.bar)
+end
+-- will print
+-- 1       a       nil
+-- 2       a       nil
+
+]]--
+function _M.children(var, tag, key, value, maxdepth)
+
+	local function get_children(var, tag, key, value, maxdepth)
+		-- pass maxdepth = 1 to retrieve only immediate child nodes
+		local result = {}
+		_M.iterate(var,
+			function(node, depth)
+				-- add matching node to result table
+				if depth > 0 then table.insert(result, node); end
+			end,
+			tag, key, value, true, maxdepth)
+		return result
+	end
+
+	local function child_iterator(matched, k)
+		k = (k or 0) + 1
+		local v = matched[k]
+		return v and k, v -- key/value pair from matches, or `nil` if no value
+	end
+
+	maxdepth = maxdepth or 1 -- default to 1...
+	-- ...but enumerate all children if it was set to 0 or `true`
+	if maxdepth == 0 or maxdepth == true then maxdepth = nil; end
+
+	-- our "invariant state" will be a table of matched children
+	return child_iterator,
+		get_children(var, tag, key, value, maxdepth)
+end
+
 --[[-- recursively searches a Lua table for a subelement
-matching the provided tag and attribute.
+matching the provided tag and attribute. See the description of `match` for
+the logic involved with testing for` tag`, `key` and `value`.
 
 @function find
 @param var  the table to be searched in
 @tparam ?string tag  the XML tag to be found
 @tparam ?string key  the attribute key (= exact name) to be found
 @param value (optional)  the attribute value to be found
-@return  the first (sub-)table which matches the search condition, or `nil`
+@return  the first (sub-)table that satisfies the search condition,
+or `nil` for no match
 ]]--
 function _M.find(var, tag, key, value)
-
-	local function asstring(arg, strict)
-		if type(arg) == "string" then
-			if #arg == 0 then return nil; end
-		else
-			if strict then return nil; end
-		end
-		return arg
-	end
-
-	-- check input:
-	if type(var) ~= "table" then return end
-	tag = asstring(tag, false)
-	key = asstring(key, true)
-	value = asstring(value, false)
-
-	-- compare this table:
-	if tag == nil or _M.tag(var) == tag then
-		if value == nil or var[key] == value then
-			return _M.new(var)
-		end
-	end
-
-	-- recursively parse subtags:
-	for k, v in ipairs(var) do
-		if type(v) == "table" then
-			local ret = _M.find(v, tag, key, value)
-			if ret ~= nil then return ret end -- return first non-empty match
-		end
-	end
+	-- "find" = recursive iteration that will stop on (and return) first match
+	local match
+	_M.iterate(var,
+		function(node, depth)
+			match = node
+			return false -- (stop iteration)
+		end,
+		tag, key, value, true)
+	return match
 end
 
 return _M -- return module (table)

@@ -52,8 +52,9 @@ print(x)
 
 ### Documentation
 
-See the [LuaXML reference](http://cdn.rawgit.com/n1tehawk/LuaXML/master/LuaXML.html)
-for a list of available functions.
+See the [LuaXML reference](http://rawgit.com/n1tehawk/LuaXML/master/LuaXML.html)
+for a list of available functions and some usage examples. You might also look
+at [test.lua](test.lua) and [unittest.lua](unittest.lua).
 
 
 ### LuaXML License

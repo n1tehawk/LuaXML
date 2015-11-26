@@ -80,6 +80,17 @@ function TestXml:test_parse()
 	local script_str = test:find("script")[1]
 	lu.assertEquals(script_str:sub(1, 1), '\n')
 	lu.assertEquals(script_str:sub(-1), ' ')
+
+	-- test match() / iterate() functions against known values
+	lu.assertEquals(test:find(nil, "id", "dopplerVelocity")[1], "330.0")
+	local func, t = test:find("resources"):children(nil, "mime", "audio/wav")
+	lu.assertEquals(#t, 3)
+	-- verify number of elements with "float" tag
+	lu.assertEquals(test:iterate(function() end, "float", nil, nil, true), 14)
+	-- verify number of elements with "id" attribute
+	lu.assertEquals(test:iterate(function() end, nil, "id", nil, true), 58)
+	-- verify number of elements where "loop" attribute is "true"
+	lu.assertEquals(test:iterate(function() end, nil, "loop", "true", true), 4)
 end
 
 function TestXml:test_transform()
