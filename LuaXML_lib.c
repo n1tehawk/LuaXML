@@ -29,10 +29,11 @@ THE SOFTWARE.
 
 #include "LuaXML_lib.h"
 
-#include <stdio.h>
-#include <string.h>
 #include <ctype.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /* compatibility with older Lua versions (<5.2) */
 #if LUA_VERSION_NUM < 502
@@ -46,10 +47,19 @@ THE SOFTWARE.
 		luaL_register(L, NULL, funcs); \
 	} while (0)
 
-#else
+#endif
+/* API changes for 5.2+ */
+#if LUA_VERSION_NUM >= 502
 
 	// lua_compare() has replaced lua_equal()
 	#define lua_equal(L, index1, index2)	lua_compare(L, index1, index2, LUA_OPEQ)
+
+#endif
+/* API changes for 5.3+ */
+#if LUA_VERSION_NUM >= 503
+
+	// luaL_optinteger() has replaced luaL_optint()
+	#define luaL_optint(L, arg, d)	luaL_optinteger(L, arg, d)
 
 #endif
 
@@ -841,6 +851,101 @@ int Xml_match(lua_State *L) {
 	return 0;
 }
 
+/** iterates a LuaXML object,
+invoking a callback function for all matching (sub)elements.
+
+The iteration starts with the variable `var` itself (= default depth 0).
+A callback function `cb` gets invoked for each `match`, depending on the
+specified criteria. If the `r` flag is set, the process will
+repeat **recursively** for the subelements of `var` (at depth + 1). You can
+limit the scope by setting a maximum depth, or have the callback function
+explicitly request to stop the iteration (by returning `false`).
+
+@function iterate
+
+@param var  the table (LuaXML object) to iterate
+
+@tparam function cb
+callback function. `callback(var, depth)` will be called for each matching
+element.<br>
+The function may return `false` to request a stop; if its result is
+any other value (including `nil`), the iteration will continue.
+
+@tparam ?string tag  XML tag to be matched
+@tparam ?string key  attribute key to be matched
+@param value  (optional) attribute value to be matched
+
+@tparam ?boolean r
+recursive operation. If `true`, also iterate over the subelements of `var`
+
+@tparam ?number max  maximum depth allowed
+@tparam ?number d  initial depth value, defaults to 0
+
+@return
+The function returns two values: a counter representing the number of elements
+that were successfully matched (and processed), and a boolean completion flag.
+The latter is `true` for an exhaustive iteration, and `false` if was stopped
+from the callback.
+
+@see match
+*/
+int Xml_iterate(lua_State *L) {
+	lua_settop(L, 8);
+	luaL_checktype(L, 2, LUA_TFUNCTION); // callback must be a function
+	int maxdepth = luaL_optint(L, 7, -1); // default (< 0) indicates "no limit"
+	int depth = lua_tointeger(L, 8);
+	int count = 0;
+	bool cont = true;
+	// examine "var" element first
+	lua_pushcfunction(L, Xml_match);
+	lua_pushvalue(L, 1); // var
+	lua_pushvalue(L, 3); // tag
+	lua_pushvalue(L, 4); // key
+	lua_pushvalue(L, 5); // value
+	lua_call(L, 4, 1);
+	if (!lua_isnil(L, -1)) { // "var" matches, invoke callback
+		count = 1;
+		lua_pushvalue(L, 2); // duplicate function
+		lua_insert(L, -2);
+		lua_pushinteger(L, depth);
+		lua_call(L, 2, 1);
+		lua_pushboolean(L, false);
+		cont = !lua_equal(L, -1, -2);
+		lua_pop(L, 2);
+	}
+	else lua_pop(L, 1);
+	if (cont && lua_toboolean(L, 6) && lua_type(L, 1) == LUA_TTABLE) {
+		// process "children" / sub-elements recursively
+		depth += 1;
+		if (maxdepth < 0 || depth <= maxdepth) {
+			int k = 0;
+			while (true) {
+				lua_pushcfunction(L, Xml_iterate);
+				lua_rawgeti(L, 1, ++k);
+				if (lua_isnil(L, -1)) break; // no element var[k], exit loop
+				lua_pushvalue(L, 2);
+				lua_pushvalue(L, 3);
+				lua_pushvalue(L, 4);
+				lua_pushvalue(L, 5);
+				lua_pushboolean(L, true);
+				lua_pushvalue(L, 7);
+				lua_pushinteger(L, depth);
+				lua_call(L, 8, 2); // done, continue = iterate(var[k], ...)
+				count += lua_tointeger(L, -2);
+				if (!lua_toboolean(L, -1)) {
+					lua_pushinteger(L, count);
+					lua_pushboolean(L, false);
+					return 2;
+				}
+				lua_pop(L, 2);
+			}
+		}
+	}
+	lua_pushinteger(L, count);
+	lua_pushboolean(L, true);
+	return 2;
+}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -853,6 +958,7 @@ int _EXPORT luaopen_LuaXML_lib (lua_State* L) {
 		{"encode", Xml_encode},
 		{"str", Xml_str},
 		{"match", Xml_match},
+		{"iterate", Xml_iterate},
 		{"registerCode", Xml_registerCode},
 		{NULL, NULL}
 	};
