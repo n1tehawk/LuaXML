@@ -45,6 +45,9 @@ function TestXml:test_basics()
 	lu.assertEquals(xml.eval("<bar>&#32;</bar>")[1], " ")
 	lu.assertEquals(xml.eval("<foobar>&apos;&#9;&apos;</foobar>")[1], "'\t'")
 
+	-- invalid XML
+	lu.assertErrorMsgContains("Malformed XML", xml.eval, "foo<bar/>")
+
 	-- check load error
 	lu.assertErrorMsgContains("file error or file not found",
 		xml.load, "invalid_filename")

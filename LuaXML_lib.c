@@ -359,8 +359,13 @@ int Xml_eval(lua_State *L) {
 		else break;
 	}
 	else { // read elements
-		Xml_pushDecode(L, token, 0);
-		lua_rawseti(L, -2, lua_rawlen(L, -2) + 1);
+		if (lua_gettop(L)) {
+			Xml_pushDecode(L, token, 0);
+			lua_rawseti(L, -2, lua_rawlen(L, -2) + 1);
+		}
+		else // stack is empty, i.e. we encountered the token *before* any tag
+			luaL_error(L, "Malformed XML: non-empty string '%s' before any tag (parser pos %d)",
+					   token, (int)tok->i);
 	}
 	Tokenizer_delete(tok);
 	free(str);
