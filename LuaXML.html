@@ -30,6 +30,7 @@
 <h2>Contents</h2>
 <ul>
 <li><a href="#Functions">Functions</a></li>
+<li><a href="#Fields">Fields</a></li>
 </ul>
 
 
@@ -72,8 +73,8 @@ that they are found in Lua&rsquo;s package search path.</p>
 	<td class="summary">converts a string to XML encoding.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#eval">eval (xmlstring)</a></td>
-	<td class="summary">converts an XML string to a Lua table.</td>
+	<td class="name" nowrap><a href="#eval">eval (xml, mode)</a></td>
+	<td class="summary">parses an XML string into a Lua table.</td>
 	</tr>
 	<tr>
 	<td class="name" nowrap><a href="#find">find (var, tag, key, value)</a></td>
@@ -86,7 +87,7 @@ matching the provided tag and attribute.</td>
 invoking a callback function for all matching (sub)elements.</td>
 	</tr>
 	<tr>
-	<td class="name" nowrap><a href="#load">load (filename)</a></td>
+	<td class="name" nowrap><a href="#load">load (filename, mode)</a></td>
 	<td class="summary">loads XML data from a file and returns it as table.</td>
 	</tr>
 	<tr>
@@ -113,6 +114,21 @@ and XML character entities.</td>
 	<tr>
 	<td class="name" nowrap><a href="#tag">tag (var, tag)</a></td>
 	<td class="summary">sets or returns tag of a LuaXML object.</td>
+	</tr>
+</table>
+<h2><a href="#Fields">Fields</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#WS_NORMALIZE">WS_NORMALIZE</a></td>
+	<td class="summary">remove &ldquo;lead in&rdquo; whitespace before tags</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#WS_PRESERVE">WS_PRESERVE</a></td>
+	<td class="summary">preserve all whitespace, even between tags</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#WS_TRIM">WS_TRIM</a></td>
+	<td class="summary">strip all leading / trailing whitespace</td>
 	</tr>
 </table>
 
@@ -271,24 +287,30 @@ suitable XML encodings.
 </dd>
     <dt>
     <a name = "eval"></a>
-    <strong>eval (xmlstring)</strong>
+    <strong>eval (xml, mode)</strong>
     </dt>
     <dd>
-    converts an XML string to a Lua table.
+    parses an XML string into a Lua table.
 
 
     <h3>Parameters:</h3>
     <ul>
-        <li><span class="parameter">xmlstring</span>
+        <li><span class="parameter">xml</span>
             <span class="types"><a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-          the string to be converted
+        the string to be converted. <code>xml</code> may also be a userdata value pointing to
+a C-style (NUL-terminated) string.
+        </li>
+        <li><span class="parameter">mode</span>
+            <span class="types">optional <span class="type">number</span></span>
+        whitespace handling mode, one of the <code>WS_*</code> constants &ndash; see <a href="#Fields">Fields</a>.
+defaults to <a href="LuaXML.html#WS_TRIM">WS_TRIM</a>  (compatible to previous LuaXML versions)
         </li>
     </ul>
 
     <h3>Returns:</h3>
     <ol>
 
-        a Lua table containing the XML data, or <code>nil</code> in case of errors
+        a LuaXML object containing the XML data, or <code>nil</code> in case of errors
     </ol>
 
 
@@ -406,7 +428,7 @@ from the callback.
 </dd>
     <dt>
     <a name = "load"></a>
-    <strong>load (filename)</strong>
+    <strong>load (filename, mode)</strong>
     </dt>
     <dd>
     loads XML data from a file and returns it as table.
@@ -418,6 +440,10 @@ Basically, this is just calling <a href="LuaXML.html#eval">eval</a>  on the give
         <li><span class="parameter">filename</span>
             <span class="types"><a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
           the name and path of the file to be loaded
+        </li>
+        <li><span class="parameter">mode</span>
+            <span class="types">optional <span class="type">number</span></span>
+          whitespace handling mode, defaults to <a href="LuaXML.html#WS_TRIM">WS_TRIM</a>
         </li>
     </ul>
 
@@ -680,6 +706,69 @@ should ever change).
 its tag changed); otherwise the result will be the current tag of <code>var</code>
 (normally a string).
     </ol>
+
+
+
+
+</dd>
+</dl>
+    <h2><a name="Fields"></a>Fields</h2>
+    <dl class="function">
+    <dt>
+    <a name = "WS_NORMALIZE"></a>
+    <strong>WS_NORMALIZE</strong>
+    </dt>
+    <dd>
+    remove &ldquo;lead in&rdquo; whitespace before tags
+
+
+    <ul>
+        <li><span class="parameter">WS_NORMALIZE</span>
+
+
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "WS_PRESERVE"></a>
+    <strong>WS_PRESERVE</strong>
+    </dt>
+    <dd>
+    preserve all whitespace, even between tags
+
+
+    <ul>
+        <li><span class="parameter">WS_PRESERVE</span>
+
+
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "WS_TRIM"></a>
+    <strong>WS_TRIM</strong>
+    </dt>
+    <dd>
+    strip all leading / trailing whitespace
+
+
+    <ul>
+        <li><span class="parameter">WS_TRIM</span>
+
+
+        </li>
+    </ul>
+
 
 
 

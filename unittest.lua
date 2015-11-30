@@ -46,6 +46,18 @@ function TestXml:test_basics()
 	lu.assertEquals(xml.eval("<bar>&#32;</bar>")[1], " ")
 	lu.assertEquals(xml.eval("<foobar>&apos;&#9;&apos;</foobar>")[1], "'\t'")
 
+	-- enhanced whitespace handling
+	lu.assertEquals(xml.eval("<foo> </foo>"):str(), "<foo />\n") -- default mode
+	lu.assertEquals(xml.eval("<foo> </foo>", xml.WS_TRIM):str(), "<foo />\n")
+	lu.assertEquals(xml.eval("<foo> </foo>", xml.WS_PRESERVE):str(),
+					"<foo> </foo>\n")
+	lu.assertEquals(xml.eval("<foo>\n  <bar/> x\t</foo>", xml.WS_TRIM),
+					{{[0]="bar"}, "x", [0]="foo"})
+	lu.assertEquals(xml.eval("<foo>\n  <bar/> x\t</foo>", xml.WS_NORMALIZE),
+					{{[0]="bar"}, " x\t", [0]="foo"})
+	lu.assertEquals(xml.eval("<foo>\n  <bar/> x\t</foo>", xml.WS_PRESERVE),
+					{"\n  ", {[0]="bar"}, " x\t", [0]="foo"})
+
 	-- invalid XML
 	lu.assertErrorMsgContains("Malformed XML", xml.eval, "foo<bar/>")
 
@@ -95,6 +107,7 @@ end
 
 function TestXml:test_transform()
 	local test = xml.load("test.xml")
+
 	-- There is a slight inconsistency in the output produced by LuaXML:
 	-- It doesn't preserve the CDATA encapsulation within the <script> element,
 	-- which in turn causes xml.load() to discard whitespace enclosing the
@@ -104,6 +117,11 @@ function TestXml:test_transform()
 	script[1] = string.gsub(script[1], "[ \t\n]+$", "")
 	-- make sure we can parse back the textual representation without "losses"
 	local expected = xml.eval(test:str())
+	lu.assertEquals(test, expected)
+
+	-- But the test *will* pass smoothly with modified whitespace handling!
+	test = xml.load("test.xml")
+	expected = xml.eval(test:str(), xml.WS_NORMALIZE)
 	lu.assertEquals(test, expected)
 end
 

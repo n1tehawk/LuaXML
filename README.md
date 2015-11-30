@@ -4,23 +4,26 @@
 
 ## LuaXML
 
-- A module that maps between Lua and XML without much ado
+A module that maps between Lua and XML without much ado.
 - Version 1.8.0 (Lua 5.2), 2013-06-10 by Gerald Franz, _eludi.net_
+- Modified and extended 2015 by Bernhard Nortmann,
+https://github.com/n1tehawk/LuaXML &ndash;
+version 2.0.x, compatible with Lua 5.1 to 5.3 and LuaJIT.
 
-LuaXML provides a minimal set of functions for the processing of XML data in Lua. It offers a 
-very simple and natural mapping between the XML data format and Lua tables, which 
-allows one to parse XML data just using Lua's normal table access and iteration 
-methods:
+LuaXML provides a <s>minimal</s> set of functions for processing XML data in Lua.
+It offers a very simple and natural mapping between the XML format and Lua tables,
+which allows one to work with and construct XML data just using Lua's normal
+table access and iteration methods (e.g. `ipairs()`).
 
-Substatements and text content is represented as array data having 
-numerical keys, attributes and tags use string keys. This representation makes 
-sure that the structure of XML data is exactly preserved in a read/write cycle. 
+Substatements and tag content are represented as array data having numerical
+keys (`1 .. n`), attributes use string keys, and tags the numerical index `0`.
+This representation makes sure that the structure of XML data is preserved
+exactly across read/write cycles (`eval(var:str())`).
 
-Since version 1.7, LuaXML consists of a well-optimized portable ISO-standard C file 
-and a small Lua file. It is published under the same liberal licensing conditions as Lua 
-itself (see below). It has been successfully compiled and used under Linux, various 
-flavours of MS Windows, and MacOS X.
-
+Since version 1.7, LuaXML consists of a well-optimized portable ISO-standard C
+file and a small Lua file. It is published under the same liberal licensing
+conditions as Lua itself (see [below](#luaxml-license)). It has been successfully
+compiled and used under Linux, various flavours of MS Windows, and MacOS X.
 
 
 ### Example
