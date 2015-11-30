@@ -110,6 +110,21 @@ static void push_indentStr(lua_State *L, int level) {
 	luaL_pushresult(&b);
 }
 
+// tests if a string consists entirely of whitespace
+static bool is_whitespace(const char *s) {
+	if (!s) return false; // NULL pointer
+	if (*s == 0) return false; // empty string
+	while (*s)
+		if (!isspace(*s++)) return false;
+	return true;
+}
+
+// We consider a token "lead in", if it 1) is all whitespace and 2) starts with
+// a newline. (This is typical for line breaks plus indentation on nested XML.)
+static bool is_lead_token(const char *s) {
+	return is_whitespace(s) && (*s == '\n' || *s == '\r');
+}
+
 /*
  * Lua C function to replace a gsub() match with the corresponding character.
  * Xml_pushDecode() will use this as a replacement function argument to undo
@@ -131,6 +146,21 @@ static int XMLencoding_replacement(lua_State *L) {
 	return 0;
 }
 
+
+/// strip all leading / trailing whitespace
+//  @field WS_TRIM
+
+/// remove "lead in" whitespace before tags
+//  @field WS_NORMALIZE
+
+/// preserve all whitespace, even between tags
+//  @field WS_PRESERVE
+
+enum whitespace_mode {
+	WHITESPACE_TRIM,
+	WHITESPACE_NORMALIZE,
+	WHITESPACE_PRESERVE
+};
 
 // control chars used by the Tokenizer to denote special meanings
 #define ESC	27	/* end of scope, closing tag */
@@ -158,12 +188,17 @@ typedef struct Tokenizer_s  {
 	size_t m_token_size;
 	/// capacity of current token
 	size_t m_token_capacity;
+	/// whitespace handling
+	enum whitespace_mode mode;
 } Tokenizer;
 
-Tokenizer* Tokenizer_new(const char* str, size_t str_size) {
+Tokenizer *Tokenizer_new(const char *str, size_t str_size,
+		enum whitespace_mode mode)
+{
 	Tokenizer *tok = calloc(1, sizeof(Tokenizer));
 	tok->s_size = str_size;
 	tok->s = str;
+	tok->mode = mode;
 	return tok;
 }
 
@@ -296,15 +331,18 @@ const char* Tokenizer_next(Tokenizer* tok) {
 			if(tok->tagMode&&!quotMode) {
 				if(tok->m_token_size) tokenComplete=1;
 			}
-			else if(tok->m_token_size) Tokenizer_append(tok, tok->s[tok->i]);
+			else
+				if (tok->m_token_size || tok->mode != WHITESPACE_TRIM)
+					Tokenizer_append(tok, tok->s[tok->i]);
 			break;
 			default: Tokenizer_append(tok, tok->s[tok->i]);
 		}
 		++tok->i;
 		if((tok->i>=tok->s_size)||(tokenComplete&&tok->m_token_size)) {
 			tokenComplete=0;
-			while(tok->m_token_size&&isspace(tok->m_token[tok->m_token_size-1])) // trim whitespace
-				tok->m_token[--tok->m_token_size]=0;
+			if (tok->mode == WHITESPACE_TRIM) // trim whitespace
+				while (tok->m_token_size && isspace(tok->m_token[tok->m_token_size - 1]))
+					tok->m_token[--tok->m_token_size] = 0;
 			if(tok->m_token_size) break;
 		}
 	}
@@ -472,12 +510,21 @@ static void Xml_pushDecode(lua_State *L, const char *s, int size) {
 	}
 }
 
-/** converts an XML string to a Lua table.
+/** parses an XML string into a Lua table.
 @function eval
-@tparam string xmlstring  the string to be converted
-@return  a Lua table containing the XML data, or `nil` in case of errors
+
+@tparam string xml
+the string to be converted. `xml` may also be a userdata value pointing to
+a C-style (NUL-terminated) string.
+
+@tparam ?number mode
+whitespace handling mode, one of the `WS_*` constants - see [Fields](#Fields).
+defaults to `WS_TRIM` (compatible to previous LuaXML versions)
+
+@return  a LuaXML object containing the XML data, or `nil` in case of errors
 */
 int Xml_eval(lua_State *L) {
+	enum whitespace_mode mode = luaL_optint(L, 2, WHITESPACE_TRIM);
 	char* str = 0;
 	size_t str_size=0;
 	if(lua_isuserdata(L,1))
@@ -488,11 +535,11 @@ int Xml_eval(lua_State *L) {
 		memcpy(str, sTmp, str_size);
 		str[str_size]=0;
 	}
-	Tokenizer* tok = Tokenizer_new(str, str_size ? str_size : strlen(str));
+	Tokenizer *tok = Tokenizer_new(str, str_size ? str_size : strlen(str), mode);
 	lua_settop(L,0);
 	const char* token=0;
 	int firstStatement = 1;
-	while((token=Tokenizer_next(tok))!=0) if(token[0]==OPN) { // new tag found
+	while((token=Tokenizer_next(tok))!=0) if (*token == OPN) { // new tag found
 		if(lua_gettop(L)) {
 			lua_newtable(L);
 			lua_pushvalue(L, -1); // duplicate table (keep one copy on stack)
@@ -512,7 +559,7 @@ int Xml_eval(lua_State *L) {
 		lua_pushstring(L, Tokenizer_next(tok));
 		lua_rawset(L, -3);
 
-		while(((token = Tokenizer_next(tok))!=0)&&(token[0]!=CLS)&&(token[0]!=ESC)) { // parse tag header
+		while(((token = Tokenizer_next(tok))!=0)&&(*token != CLS)&&(*token != ESC)) { // parse tag header
 			size_t sepPos=find(token, "=", 0);
 			if(token[sepPos]) { // regular attribute
 				const char* aVal =token+sepPos+2;
@@ -521,23 +568,27 @@ int Xml_eval(lua_State *L) {
 				lua_rawset(L, -3);
 			}
 		}
-		if(!token||(token[0]==ESC)) {
+		if (!token || (*token == ESC)) {
 			if(lua_gettop(L)>1) lua_settop(L,-2); // this tag has no content, only attributes
 			else break;
 		}
 	}
-	else if(token[0]==ESC) { // previous tag is over
+	else if (*token == ESC) { // previous tag is over
 		if(lua_gettop(L)>1) lua_settop(L,-2); // pop current table
 		else break;
 	}
 	else { // read elements
 		if (lua_gettop(L)) {
-			Xml_pushDecode(L, token, -1);
-			lua_rawseti(L, -2, lua_rawlen(L, -2) + 1);
+			// when normalizing, we'll ignore tokens we consider "lead-in" type
+			if (mode != WHITESPACE_NORMALIZE || !is_lead_token(token)) {
+				Xml_pushDecode(L, token, -1);
+				lua_rawseti(L, -2, lua_rawlen(L, -2) + 1);
+			}
 		}
-		else // stack is empty, i.e. we encountered the token *before* any tag
-			luaL_error(L, "Malformed XML: non-empty string '%s' before any tag (parser pos %d)",
-					   token, (int)tok->i);
+		else // stack is empty, i.e. we encountered the element *before* any tag
+			if (!is_whitespace(token))
+				luaL_error(L, "Malformed XML: non-empty string '%s' before any tag (parser pos %d)",
+						   token, (int)tok->i);
 	}
 	Tokenizer_delete(tok);
 	free(str);
@@ -549,6 +600,7 @@ Basically, this is just calling `eval` on the given file's content.
 
 @function load
 @tparam string filename  the name and path of the file to be loaded
+@tparam ?number mode  whitespace handling mode, defaults to `WS_TRIM`
 @return  a Lua table representing the XML data, or `nil` in case of errors
 */
 int Xml_load (lua_State *L) {
@@ -973,6 +1025,14 @@ int _EXPORT luaopen_LuaXML_lib (lua_State* L) {
 	lua_pushcfunction(L, Xml_str);
 	lua_rawset(L, -3); // set metamethod
 	lua_pop(L, 1); // drop value (metatable)
+
+	// expose API constants (via the module table)
+	lua_pushinteger(L, WHITESPACE_TRIM);
+	lua_setfield(L, -2, "WS_TRIM");
+	lua_pushinteger(L, WHITESPACE_NORMALIZE);
+	lua_setfield(L, -2, "WS_NORMALIZE");
+	lua_pushinteger(L, WHITESPACE_PRESERVE);
+	lua_setfield(L, -2, "WS_PRESERVE");
 
 	// register default codes:
 	if(!sv_code) {
