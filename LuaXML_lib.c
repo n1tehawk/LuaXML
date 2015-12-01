@@ -1,4 +1,4 @@
-/**
+/*
 LuaXML License
 
 LuaXML is licensed under the terms of the MIT license reproduced below,
@@ -25,6 +25,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+/// @module LuaXML
 
 #include "LuaXML_lib.h"
 
@@ -279,6 +280,11 @@ static void Xml_pushDecode(lua_State* L, const char* s, size_t s_size) {
 	}
 }
 
+/** converts an XML string to a Lua table.
+@function xml.eval
+@tparam string xmlstring  the string to be converted
+@return  a Lua table containing the XML data, or `nil` in case of errors
+*/
 int Xml_eval(lua_State *L) {
 	char* str = 0;
 	size_t str_size=0;
@@ -360,6 +366,13 @@ int Xml_eval(lua_State *L) {
 	return lua_gettop(L);
 }
 
+/** loads XML data from a file and returns it as table.
+Basically, this is just calling `xml.eval` on the given file's content.
+
+@function xml.load
+@tparam string filename  the name and path of the file to be loaded
+@return  a Lua table representing the XML data, or `nil` in case of errors
+*/
 int Xml_load (lua_State *L) {
 	const char * filename = luaL_checkstring(L,1);
 	FILE * file=fopen(filename,"r");
@@ -378,6 +391,20 @@ int Xml_load (lua_State *L) {
 	return Xml_eval(L);
 };
 
+/** registers a custom code for the conversion between non-standard characters
+and XML character entities.
+
+By default, only the most basic entities are known to LuaXML:
+	" & < > '
+ANSI codes above 127 are directly converted to the XML character codes of the
+same number. If more character codes are needed, they can be registered using
+this function.
+
+@function xml.registerCode
+@tparam string decoded  the character (sequence) to be used within Lua
+@tparam string encoded  the character entity to be used in XML
+@see xml.encode
+*/
 int Xml_registerCode(lua_State *L) {
 	const char * decoded = luaL_checkstring(L,1);
 	const char * encoded = luaL_checkstring(L,2);
@@ -397,6 +424,15 @@ int Xml_registerCode(lua_State *L) {
 	return 0;
 }
 
+/** converts a string to XML encoding.
+This function transforms` str` by replacing any special characters with
+suitable XML encodings.
+
+@function xml.encode
+@tparam string str  string to be transformed
+@treturn string  the XML-encoded string
+@see xml.registerCode
+*/
 int Xml_encode(lua_State *L) {
 	if(lua_gettop(L)!=1)
 		return 0;

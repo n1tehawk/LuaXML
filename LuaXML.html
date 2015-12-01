@@ -1,0 +1,468 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<head>
+    <title>LuaXML reference</title>
+    <link rel="stylesheet" href="ldoc.css" type="text/css" />
+</head>
+<body>
+
+<div id="container">
+
+<div id="product">
+	<div id="product_logo"></div>
+	<div id="product_name"><big><b></b></big></div>
+	<div id="product_description"></div>
+</div> <!-- id="product" -->
+
+
+<div id="main">
+
+
+<!-- Menu -->
+
+<div id="navigation">
+<br/>
+<h1>LuaXML</h1>
+
+
+<h2>Contents</h2>
+<ul>
+<li><a href="#Functions">Functions</a></li>
+<li><a href="#Fields">Fields</a></li>
+</ul>
+
+
+<h2>Modules</h2>
+<ul class="$(kind=='Topics' and '' or 'nowrap'">
+  <li><strong>LuaXML</strong></li>
+</ul>
+
+</div>
+
+<div id="content">
+
+<h1>Module <code>LuaXML</code></h1>
+<p>Import the LuaXML module as global object &ldquo;xml&rdquo;:</p>
+
+<pre><code>xml = require("LuaXML")
+</code></pre>
+
+<p>LuaXML consists of a Lua file (<code>LuaXML.lua</code>) and a corresponding C module
+(<code>LuaXML_lib</code>) &ndash; normally a shared library (<code>.dll</code>/<code>.so</code>), although a static
+linking is possible as well.</p>
+<p> Both parts are imported by this call, provided
+that they are found in Lua&rsquo;s package search path.</p>
+
+<p>&nbsp;</p>
+
+
+<h2><a href="#Functions">Functions</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#xml.append">xml.append (var, tag)</a></td>
+	<td class="summary">appends a new subordinate LuaXML object to an existing one.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#xml.encode">xml.encode (str)</a></td>
+	<td class="summary">converts a string to XML encoding.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#xml.eval">xml.eval (xmlstring)</a></td>
+	<td class="summary">converts an XML string to a Lua table.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#xml.find">xml.find (var, tag, key, value)</a></td>
+	<td class="summary">recursively searches a Lua table for a subelement
+matching the provided tag and attribute.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#xml.load">xml.load (filename)</a></td>
+	<td class="summary">loads XML data from a file and returns it as table.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#xml.new">xml.new (arg)</a></td>
+	<td class="summary">creates a new LuaXML object.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#xml.registerCode">xml.registerCode (decoded, encoded)</a></td>
+	<td class="summary">registers a custom code for the conversion between non-standard characters
+and XML character entities.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#xml.save">xml.save (var, filename)</a></td>
+	<td class="summary">saves a Lua var as XML file.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#xml.str">xml.str (var, indent, tag)</a></td>
+	<td class="summary">converts any Lua var to an XML string.</td>
+	</tr>
+	<tr>
+	<td class="name" nowrap><a href="#xml.tag">xml.tag (var, tag)</a></td>
+	<td class="summary">sets or returns tag of a LuaXML object.</td>
+	</tr>
+</table>
+<h2><a href="#Fields">Fields</a></h2>
+<table class="function_list">
+	<tr>
+	<td class="name" nowrap><a href="#xml.TAG">xml.TAG</a></td>
+	<td class="summary">symbolic name for tag index, this allows accessing the tag by <code>var[xml.TAG]</code></td>
+	</tr>
+</table>
+
+<br/>
+<br/>
+
+
+    <h2><a name="Functions"></a>Functions</h2>
+    <dl class="function">
+    <dt>
+    <a name = "xml.append"></a>
+    <strong>xml.append (var, tag)</strong>
+    </dt>
+    <dd>
+    appends a new subordinate LuaXML object to an existing one.
+optionally sets tag
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">var</span>
+          the parent LuaXML object
+        </li>
+        <li><span class="parameter">tag</span>
+            <span class="types">optional <a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          the tag of the appended LuaXML object
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        appended LuaXML object, or <code>nil</code> in case of errors
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "xml.encode"></a>
+    <strong>xml.encode (str)</strong>
+    </dt>
+    <dd>
+    converts a string to XML encoding.
+This function transforms<code> str</code> by replacing any special characters with
+suitable XML encodings.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">str</span>
+            <span class="types"><a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          string to be transformed
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+        the XML-encoded string
+    </ol>
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="LuaXML.html#xml.registerCode">xml.registerCode</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "xml.eval"></a>
+    <strong>xml.eval (xmlstring)</strong>
+    </dt>
+    <dd>
+    converts an XML string to a Lua table.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">xmlstring</span>
+            <span class="types"><a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          the string to be converted
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        a Lua table containing the XML data, or <code>nil</code> in case of errors
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "xml.find"></a>
+    <strong>xml.find (var, tag, key, value)</strong>
+    </dt>
+    <dd>
+    recursively searches a Lua table for a subelement
+matching the provided tag and attribute.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">var</span>
+          the table to be searched in
+        </li>
+        <li><span class="parameter">tag</span>
+            <span class="types">optional <a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          the XML tag to be found
+        </li>
+        <li><span class="parameter">key</span>
+            <span class="types">optional <a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          the attribute key (= exact name) to be found
+        </li>
+        <li><span class="parameter">value</span>
+         (optional)  the attribute value to be found
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        the first (sub-)table which matches the search condition, or <code>nil</code>
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "xml.load"></a>
+    <strong>xml.load (filename)</strong>
+    </dt>
+    <dd>
+    loads XML data from a file and returns it as table.
+Basically, this is just calling <a href="LuaXML.html#xml.eval">xml.eval</a>  on the given file&rsquo;s content.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">filename</span>
+            <span class="types"><a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          the name and path of the file to be loaded
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        a Lua table representing the XML data, or <code>nil</code> in case of errors
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "xml.new"></a>
+    <strong>xml.new (arg)</strong>
+    </dt>
+    <dd>
+    creates a new LuaXML object.
+This is achieved either by setting the metatable of an existing Lua table, or
+by creating a new (empty) object and setting its tag.</p>
+
+<p>Note that it&rsquo;s not mandatory to use this function in order to treat a Lua table
+as LuaXML object. Setting the metatable just allows the usage of a more
+object-oriented syntax (e.g. <code>xmlvar:str()</code> instead of <code>xml.str(xmlvar)</code>).
+XML objects created by <a href="LuaXML.html#xml.load">xml.load</a>  or <a href="LuaXML.html#xml.eval">xml.eval</a>  automatically offer the
+object-oriented syntax.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">arg</span>
+          (optional) <em>(1)</em> a table to be converted to a LuaXML object,
+or <em>(2)</em> the tag of the new LuaXML object
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        new LuaXML object
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "xml.registerCode"></a>
+    <strong>xml.registerCode (decoded, encoded)</strong>
+    </dt>
+    <dd>
+    registers a custom code for the conversion between non-standard characters
+and XML character entities. </p>
+
+<p>By default, only the most basic entities are known to LuaXML:</p>
+
+<pre><code>" &amp; &lt; &gt; '
+</code></pre>
+
+<p>ANSI codes above 127 are directly converted to the XML character codes of the
+same number. If more character codes are needed, they can be registered using
+this function.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">decoded</span>
+            <span class="types"><a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          the character (sequence) to be used within Lua
+        </li>
+        <li><span class="parameter">encoded</span>
+            <span class="types"><a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          the character entity to be used in XML
+        </li>
+    </ul>
+
+
+
+    <h3>See also:</h3>
+    <ul>
+         <a href="LuaXML.html#xml.encode">xml.encode</a>
+    </ul>
+
+
+</dd>
+    <dt>
+    <a name = "xml.save"></a>
+    <strong>xml.save (var, filename)</strong>
+    </dt>
+    <dd>
+    saves a Lua var as XML file.
+Basically this simply exports the string representation <code>xml.str(var)</code>
+(or <code>var:str()</code>), plus a standard header.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">var</span>
+          the variable to be saved, normally a table
+        </li>
+        <li><span class="parameter">filename</span>
+            <span class="types"><a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          the filename to be used. An existing file of the same name gets overwritten.
+        </li>
+    </ul>
+
+
+
+
+
+</dd>
+    <dt>
+    <a name = "xml.str"></a>
+    <strong>xml.str (var, indent, tag)</strong>
+    </dt>
+    <dd>
+    converts any Lua var to an XML string.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">var</span>
+          the variable to be converted, normally a table
+        </li>
+        <li><span class="parameter">indent</span>
+            <span class="types">optional <span class="type">number</span></span>
+          the current level of indentation for pretty output. Mainly for internal use.
+        </li>
+        <li><span class="parameter">tag</span>
+            <span class="types">optional <a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          the tag to be used for a table without tag. Mainly for internal use.
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+        an XML string, or <code>nil</code> in case of errors
+    </ol>
+
+
+
+
+</dd>
+    <dt>
+    <a name = "xml.tag"></a>
+    <strong>xml.tag (var, tag)</strong>
+    </dt>
+    <dd>
+    sets or returns tag of a LuaXML object.
+This method is just &ldquo;syntactic sugar&rdquo; (using a typical Lua term) that allows
+the writing of clearer code. LuaXML stores the tag value of an XML statement
+at table index 0, hence it can be simply accessed or altered by <code>var[0]</code> or
+<code>var[xml.TAG]</code> (the latter is just a symbolic name for the value 0). However,
+writing <code>var:tag()</code> for access or <code>var:tag(&ldquo;newTag&rdquo;)</code> for altering may be
+more self explanatory.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">var</span>
+          the variable whose tag should be accessed, a LuaXML object
+        </li>
+        <li><span class="parameter">tag</span>
+            <span class="types">optional <a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          the new tag to be set
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+        the current tag as string
+    </ol>
+
+
+
+
+</dd>
+</dl>
+    <h2><a name="Fields"></a>Fields</h2>
+    <dl class="function">
+    <dt>
+    <a name = "xml.TAG"></a>
+    <strong>xml.TAG</strong>
+    </dt>
+    <dd>
+    symbolic name for tag index, this allows accessing the tag by <code>var[xml.TAG]</code>
+
+
+
+
+
+
+
+</dd>
+</dl>
+
+
+</div> <!-- id="content" -->
+</div> <!-- id="main" -->
+<div id="about">
+<i>generated by <a href="http://github.com/stevedonovan/LDoc">LDoc 1.4.2</a></i>
+</div> <!-- id="about" -->
+</div> <!-- id="container" -->
+</body>
+</html>

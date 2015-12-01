@@ -52,3 +52,7 @@ LUA ?= lua
 test:
 	$(LUA) -v unittest.lua
 	$(LUA) test.lua
+
+# generate documentation (requires LDoc)
+doc:
+	ldoc -c .ldoc/config.ld .

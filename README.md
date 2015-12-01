@@ -52,80 +52,8 @@ print(x)
 
 ### Documentation
 
-LuaXML consists of the following functions:
-
-**xml = require("LuaXML")**
-<br>imports the LuaXML module as global object "xml". 
-<br>LuaXML consists of a lua file (`LuaXML.lua`) and normally a shared library 
-(`.dll`/`.so`), although a static linking is possible as well. Both parts 
-are imported by this call, provided that they are found in Lua's package search path.
-
-**function xml.new(arg)**
-<br>creates a new LuaXML object.
-* param `arg` (optional), _(1)_ a table to be converted to be converted to a 
-LuaXML object, or _(2)_ the tag of the new LuaXML object
-<br>Note that it is not mandatory to use this function in order to treat a Lua 
-table as LuaXML object. Setting the metatable just allows the usage of a more 
-object-oriented syntax (e.g. `xmlvar:str()` instead of `xml.str(xmlvar)`).
-XML objects created by `xml.load()` or `xml.eval()` automatically offer the
-object-oriented syntax.
-* Returns new LuaXML object
-
-**function xml.append(var, tag)**
-<br>appends a new subordinate LuaXML object to an existing one, optionally sets tag.
-* param `var` the parent LuaXML object
-* param `tag` (optional) the tag of the appended LuaXML object
-* Returns appended LuaXML object or `nil` in case of error
-
-**function xml.load(filename)**
-<br>loads XML data from a file and returns it as table
-* param `filename` the name and path of the file to be loaded
-* Returns a Lua table containing the XML data in case of success or nil.
-
-**function xml.save(var, filename)**
-<br>saves a Lua var as XML file.
-* param `var`, the variable to be saved, normally a table
-* param `filename` the filename to be used. An existing file of the same name gets overwritten.
-
-**function xml.eval(xmlstring)**
-<br>converts an XML string to a Lua table
-* param `xmlstring` the string to be converted
-* Returns a Lua table containing the XML data in case of success or nil.
-
-**function xml.tag(var, tag)**
-<br>sets or returns tag of a LuaXML object. This method is just "syntactic sugar" (using a typical Lua term)
-that allows the writing of clearer code. LuaXML stores the tag value of an XML statement at table
-index 0, hence it can be simply accessed or altered by `var[0]` or `var[xml.TAG]` (the latter is just a 
-symbolic name for the value 0). However, writing `var:tag()` for access or `var:tag("newTag")` for altering 
-may be more self explanatory.
-* param `var`, the variable whose tag should be accessed, a LuaXML object
-* param `tag` (optional) the new tag to be set.
-* Returns the current tag as string
-
-**function xml.str(var, indent, tag)**
-<br>converts any Lua var to an XML string.
-* param `var`, the variable to be converted, normally a table
-* param `indent` (optional) the current level of indentation for pretty output. Mainly for internal use.
-* param `tag`    (optional) the tag to be used for a table without tag. Mainly for internal use.
-* Returns an XML string in case of success or nil.
-
-**function xml.find(var, tag, attributeKey, attributeValue)**
-<br>recursively parses a Lua table for a substatement fitting to the provided tag and attribute
-* param `var`, the table to be searched in.
-* param `tag` (optional) the xml tag to be found.
-* param `attributeKey` (optional) the exact attribute to be found.
-* param `attributeValue` (optional) the attribute value to be found.
-* Returns the first (sub-)table which matches the search condition or nil.
-
-**function xml.registerCode(decoded, encoded)**
-<br>registers a custom code for the conversion between non-standard characters and XML character entities
-* param `decoded` the character (sequence) to be used within Lua.
-* param `encoded` the character entity to be used in XML.
-* By default, only the most basic entities are known to LuaXML (`" & < > '`). 
-<br>ANSI codes above 127 are directly converted to the XML character codes 
-of the same number. If more character codes are needed, they can be 
-registered using this function.
-
+See the [LuaXML reference](http://cdn.rawgit.com/n1tehawk/LuaXML/master/LuaXML.html)
+for a list of available functions.
 
 
 ### LuaXML License
