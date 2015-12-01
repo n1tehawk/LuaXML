@@ -1,10 +1,34 @@
+--[[--
+Import the LuaXML module as global object "xml":
+	xml = require("LuaXML")
+
+LuaXML consists of a Lua file (`LuaXML.lua`) and a corresponding C module
+(`LuaXML_lib`) - normally a shared library (`.dll`/`.so`), although a static
+linking is possible as well. Both parts are imported by this call, provided
+that they are found in Lua's package search path.
+
+&nbsp;
+@module LuaXML
+]]--
 local xml = require("LuaXML_lib")
 local base = _G
 
--- symbolic name for tag index, this allows accessing the tag by var[xml.TAG]
+--- symbolic name for tag index, this allows accessing the tag by `var[xml.TAG]`
 xml.TAG = 0
 
--- sets or returns tag of a LuaXML object
+--[[-- sets or returns tag of a LuaXML object.
+This method is just "syntactic sugar" (using a typical Lua term) that allows
+the writing of clearer code. LuaXML stores the tag value of an XML statement
+at table index 0, hence it can be simply accessed or altered by `var[0]` or
+`var[xml.TAG]` (the latter is just a symbolic name for the value 0). However,
+writing `var:tag()` for access or `var:tag("newTag")` for altering may be
+more self explanatory.
+
+@function xml.tag
+@param var  the variable whose tag should be accessed, a LuaXML object
+@tparam ?string tag  the new tag to be set
+@return  the current tag as string
+]]--
 function xml.tag(var,tag)
 	if base.type(var)~="table" then return end
 	if base.type(tag)=="nil" then
@@ -13,7 +37,21 @@ function xml.tag(var,tag)
 	var[xml.TAG] = tag
 end
 
--- creates a new LuaXML object either by setting the metatable of an existing Lua table or by setting its tag
+--[[-- creates a new LuaXML object.
+This is achieved either by setting the metatable of an existing Lua table, or
+by creating a new (empty) object and setting its tag.
+
+Note that it's not mandatory to use this function in order to treat a Lua table
+as LuaXML object. Setting the metatable just allows the usage of a more 
+object-oriented syntax (e.g. `xmlvar:str()` instead of `xml.str(xmlvar)`).
+XML objects created by `xml.load` or `xml.eval` automatically offer the
+object-oriented syntax.
+
+@function xml.new
+@param arg  (optional) _(1)_ a table to be converted to a LuaXML object,
+or _(2)_ the tag of the new LuaXML object
+@return  new LuaXML object
+]]--
 function xml.new(arg)
 	if base.type(arg)=="table" then
 		base.setmetatable(arg,{__index=xml, __tostring=xml.str})
@@ -25,7 +63,14 @@ function xml.new(arg)
 	return var
 end
 
--- appends a new subordinate LuaXML object to an existing one, optionally sets tag
+--[[-- appends a new subordinate LuaXML object to an existing one.
+optionally sets tag
+
+@function xml.append
+@param var  the parent LuaXML object
+@tparam ?string tag  the tag of the appended LuaXML object
+@return  appended LuaXML object, or `nil` in case of errors
+]]--
 function xml.append(var,tag)
 	if base.type(var)~="table" then return end
 	local newVar = xml.new(tag)
@@ -33,7 +78,13 @@ function xml.append(var,tag)
 	return newVar
 end
 
--- converts any Lua var into an XML string
+--[[-- converts any Lua var to an XML string.
+@function xml.str
+@param var  the variable to be converted, normally a table
+@tparam ?number indent  the current level of indentation for pretty output. Mainly for internal use.
+@tparam ?string tag  the tag to be used for a table without tag. Mainly for internal use.
+@treturn string  an XML string, or `nil` in case of errors
+]]--
 function xml.str(var,indent,tagValue)
 	if base.type(var)=="nil" then return end
 	local indent = indent or 0
@@ -75,8 +126,14 @@ function xml.str(var,indent,tagValue)
 	end
 end
 
+--[[-- saves a Lua var as XML file.
+Basically this simply exports the string representation `xml.str(var)`
+(or `var:str()`), plus a standard header.
 
--- saves a Lua var as xml file
+@function xml.save
+@param var  the variable to be saved, normally a table
+@tparam string filename  the filename to be used. An existing file of the same name gets overwritten.
+]]--
 function xml.save(var,filename)
 	if not var then return end
 	if not filename or #filename==0 then return end
@@ -86,22 +143,30 @@ function xml.save(var,filename)
 	base.io.close(file)
 end
 
+--[[-- recursively searches a Lua table for a subelement
+matching the provided tag and attribute.
 
--- recursively parses a Lua table for a substatement fitting to the provided tag and attribute
-function xml.find(var, tag, attributeKey,attributeValue)
+@function xml.find
+@param var  the table to be searched in
+@tparam ?string tag  the XML tag to be found
+@tparam ?string key  the attribute key (= exact name) to be found
+@param value (optional)  the attribute value to be found
+@return  the first (sub-)table which matches the search condition, or `nil`
+]]--
+function xml.find(var, tag, key, value)
 	-- check input:
 	if base.type(var)~="table" then return end
 	if base.type(tag)=="string" and #tag==0 then tag=nil end
-	if base.type(attributeKey)~="string" or #attributeKey==0 then attributeKey=nil end
-	if base.type(attributeValue)=="string" and #attributeValue==0 then attributeValue=nil end
+	if base.type(key)~="string" or #key==0 then key=nil end
+	if base.type(value)=="string" and #value==0 then value=nil end
 	-- compare this table:
 	if tag~=nil then
-		if var[0]==tag and ( attributeValue == nil or var[attributeKey]==attributeValue ) then
+		if var[0]==tag and ( value == nil or var[key]==value ) then
 			base.setmetatable(var,{__index=xml, __tostring=xml.str})
 			return var
 		end
 	else
-		if attributeValue == nil or var[attributeKey]==attributeValue then
+		if value == nil or var[key]==value then
 			base.setmetatable(var,{__index=xml, __tostring=xml.str})
 			return var
 		end
@@ -109,7 +174,7 @@ function xml.find(var, tag, attributeKey,attributeValue)
 	-- recursively parse subtags:
 	for k,v in base.ipairs(var) do
 		if base.type(v)=="table" then
-			local ret = xml.find(v, tag, attributeKey,attributeValue)
+			local ret = xml.find(v, tag, key, value)
 			if ret ~= nil then return ret end
 		end
 	end
