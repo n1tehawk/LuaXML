@@ -308,12 +308,9 @@ int Xml_eval(lua_State *L) {
 	int firstStatement = 1;
 	while((token=Tokenizer_next(tok))!=0) if(token[0]==OPN) { // new tag found
 		if(lua_gettop(L)) {
-			int newIndex=lua_rawlen(L,-1)+1;
-			lua_pushnumber(L,newIndex);
 			lua_newtable(L);
-			lua_settable(L, -3);
-			lua_pushnumber(L,newIndex);
-			lua_gettable(L,-2);
+			lua_pushvalue(L, -1); // duplicate table (keep one copy on stack)
+			lua_rawseti(L, -3, lua_rawlen(L, -3) + 1);
 		}
 		else {
 			if (firstStatement) {
@@ -326,20 +323,20 @@ int Xml_eval(lua_State *L) {
 		lua_newtable(L);
 		lua_pushliteral(L, "__index");
 		lua_getglobal(L, "xml");
-		lua_settable(L, -3);
+		lua_rawset(L, -3);
 
 		lua_pushliteral(L, "__tostring"); // set __tostring metamethod
 		lua_getglobal(L, "xml");
-		lua_pushliteral(L,"str");
-		lua_gettable(L, -2);
+		lua_pushliteral(L, "str");
+		lua_rawget(L, -2);
 		lua_remove(L, -2);
-		lua_settable(L, -3);
+		lua_rawset(L, -3);
 		lua_setmetatable(L, -2);
 
 		// parse tag and content:
-		lua_pushnumber(L,0); // use index 0 for storing the tag
+		lua_pushinteger(L, 0); // use index 0 for storing the tag
 		lua_pushstring(L, Tokenizer_next(tok));
-		lua_settable(L, -3);
+		lua_rawset(L, -3);
 
 		while(((token = Tokenizer_next(tok))!=0)&&(token[0]!=CLS)&&(token[0]!=ESC)) { // parse tag header
 			size_t sepPos=find(token, "=", 0);
@@ -349,7 +346,7 @@ int Xml_eval(lua_State *L) {
 				size_t lenVal = strlen(aVal)-1;
 				if(!lenVal) Xml_pushDecode(L, "", 0);
 				else Xml_pushDecode(L, aVal, lenVal);
-				lua_settable(L, -3);
+				lua_rawset(L, -3);
 			}
 		}
 		if(!token||(token[0]==ESC)) {
@@ -362,9 +359,8 @@ int Xml_eval(lua_State *L) {
 		else break;
 	}
 	else { // read elements
-		lua_pushnumber(L,lua_rawlen(L,-1)+1);
 		Xml_pushDecode(L, token, 0);
-		lua_settable(L, -3);
+		lua_rawseti(L, -2, lua_rawlen(L, -2) + 1);
 	}
 	Tokenizer_delete(tok);
 	free(str);
