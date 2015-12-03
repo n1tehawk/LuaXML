@@ -525,22 +525,20 @@ defaults to `WS_TRIM` (compatible to previous LuaXML versions)
 */
 int Xml_eval(lua_State *L) {
 	enum whitespace_mode mode = luaL_optint(L, 2, WHITESPACE_TRIM);
-	char* str = 0;
-	size_t str_size=0;
-	if(lua_isuserdata(L,1))
-		str = lua_touserdata(L,1);
-	else {
-		const char * sTmp = luaL_checklstring(L,1,&str_size);
-		str = malloc(str_size + 1);
-		memcpy(str, sTmp, str_size);
-		str[str_size]=0;
+	const char *str;
+	size_t str_size;
+	if (lua_isuserdata(L, 1)) {
+		str = lua_touserdata(L, 1);
+		str_size = strlen(str);
 	}
-	Tokenizer *tok = Tokenizer_new(str, str_size ? str_size : strlen(str), mode);
-	lua_settop(L,0);
-	const char* token=0;
+	else str = luaL_checklstring(L, 1, &str_size);
+
+	Tokenizer *tok = Tokenizer_new(str, str_size, mode);
+	lua_settop(L, 1);
+	const char *token;
 	int firstStatement = 1;
 	while((token=Tokenizer_next(tok))!=0) if (*token == OPN) { // new tag found
-		if(lua_gettop(L)) {
+		if(lua_gettop(L) > 1) {
 			lua_newtable(L);
 			lua_pushvalue(L, -1); // duplicate table (keep one copy on stack)
 			lua_rawseti(L, -3, lua_rawlen(L, -3) + 1);
@@ -550,7 +548,7 @@ int Xml_eval(lua_State *L) {
 				lua_newtable(L);
 				firstStatement = 0;
 			}
-			else return lua_gettop(L);
+			else return 0;
 		}
 		make_xml_object(L, -1); // assign metatable
 
@@ -569,30 +567,29 @@ int Xml_eval(lua_State *L) {
 			}
 		}
 		if (!token || (*token == ESC)) {
-			if(lua_gettop(L)>1) lua_settop(L,-2); // this tag has no content, only attributes
+			if (lua_gettop(L) > 2) lua_settop(L,-2); // this tag has no content, only attributes
 			else break;
 		}
 	}
 	else if (*token == ESC) { // previous tag is over
-		if(lua_gettop(L)>1) lua_settop(L,-2); // pop current table
+		if (lua_gettop(L) > 2) lua_settop(L,-2); // pop current table
 		else break;
 	}
 	else { // read elements
-		if (lua_gettop(L)) {
+		if (lua_gettop(L) > 1) {
 			// when normalizing, we'll ignore tokens we consider "lead-in" type
 			if (mode != WHITESPACE_NORMALIZE || !is_lead_token(token)) {
 				Xml_pushDecode(L, token, -1);
 				lua_rawseti(L, -2, lua_rawlen(L, -2) + 1);
 			}
 		}
-		else // stack is empty, i.e. we encountered the element *before* any tag
+		else // element stack is empty, i.e. we encountered a token *before* any tag
 			if (!is_whitespace(token))
 				luaL_error(L, "Malformed XML: non-empty string '%s' before any tag (parser pos %d)",
 						   token, (int)tok->i);
 	}
 	Tokenizer_delete(tok);
-	free(str);
-	return lua_gettop(L);
+	return lua_gettop(L) - 1;
 }
 
 /** loads XML data from a file and returns it as table.
@@ -604,21 +601,23 @@ Basically, this is just calling `eval` on the given file's content.
 @return  a Lua table representing the XML data, or `nil` in case of errors
 */
 int Xml_load (lua_State *L) {
-	const char * filename = luaL_checkstring(L,1);
-	FILE * file=fopen(filename,"r");
-	if(!file)
-		return luaL_error(L,"LuaXML ERROR: \"%s\" file error or file not found!",filename);
+	const char *filename = luaL_checkstring(L, 1);
+	FILE *file = fopen(filename, "r");
+	if (!file)
+		return luaL_error(L, "LuaXML ERROR: \"%s\" file error or file not found!", filename);
 
-	fseek (file , 0 , SEEK_END);
-	size_t sz = ftell (file);
-	rewind (file);
+	fseek(file, 0, SEEK_END);
+	size_t sz = ftell(file);
+	rewind(file);
 	char *buffer = malloc(sz + 1);
-	sz = fread (buffer,1,sz,file);
+	sz = fread(buffer, 1, sz, file);
 	fclose(file);
-	buffer[sz]=0;
-	lua_pushlightuserdata(L,buffer);
-	lua_replace(L,1);
-	return Xml_eval(L);
+	buffer[sz] = 0;
+	lua_pushlightuserdata(L, buffer);
+	lua_replace(L, 1);
+	int result = Xml_eval(L);
+	free(buffer);
+	return result;
 };
 
 /** registers a custom code for the conversion between non-standard characters
