@@ -171,7 +171,7 @@ enum whitespace_mode {
 
 typedef struct Tokenizer_s  {
 	/// stores string to be tokenized
-	const char* s;
+	const char *s;
 	/// stores size of string to be tokenized
 	size_t s_size;
 	/// stores current read position
@@ -179,11 +179,11 @@ typedef struct Tokenizer_s  {
 	/// stores current read context
 	int tagMode;
 	/// stores next token, if already determined
-	const char* m_next;
+	const char *m_next;
 	/// size of next token
 	size_t m_next_size;
 	/// pointer to current token
-	char* m_token;
+	char *m_token;
 	/// size of current token
 	size_t m_token_size;
 	/// capacity of current token
@@ -202,7 +202,7 @@ Tokenizer *Tokenizer_new(const char *str, size_t str_size,
 	return tok;
 }
 
-void Tokenizer_delete(Tokenizer* tok) {
+void Tokenizer_delete(Tokenizer *tok) {
 	free(tok->m_token);
 	free(tok);
 }
@@ -221,27 +221,27 @@ void Tokenizer_print(Tokenizer *tok) {
 # define Tokenizer_print(tok)	/* ignore */
 #endif
 
-static const char* Tokenizer_set(Tokenizer* tok, const char* s, size_t size) {
-	if(!size||!s) return 0;
+static const char *Tokenizer_set(Tokenizer *tok, const char *s, size_t size) {
+	if (!size || !s) return NULL;
 	free(tok->m_token);
 	tok->m_token = malloc(size + 1);
-	strncpy(tok->m_token,s, size);
+	strncpy(tok->m_token, s, size);
 	tok->m_token[size] = 0;
 	tok->m_token_size = tok->m_token_capacity = size;
 	Tokenizer_print(tok);
 	return tok->m_token;
 }
 
-static void Tokenizer_append(Tokenizer* tok, char ch) {
-	if(tok->m_token_size+1>=tok->m_token_capacity) {
-		tok->m_token_capacity = (tok->m_token_capacity==0) ? 16 : tok->m_token_capacity*2;
+static void Tokenizer_append(Tokenizer *tok, char ch) {
+	if (tok->m_token_size + 1 >= tok->m_token_capacity) {
+		tok->m_token_capacity = tok->m_token_capacity ? tok->m_token_capacity * 2 : 16;
 		tok->m_token = realloc(tok->m_token, tok->m_token_capacity);
 	}
-	tok->m_token[tok->m_token_size]=ch;
-	tok->m_token[++tok->m_token_size]=0;
+	tok->m_token[tok->m_token_size] = ch;
+	tok->m_token[++tok->m_token_size] = 0;
 }
 
-const char* Tokenizer_next(Tokenizer* tok) {
+const char *Tokenizer_next(Tokenizer *tok) {
 	// NUL-terminated strings for the special tokens
 	static const char ESC_str[] = {ESC, 0};
 	static const char OPEN_str[] = {OPN, 0};
@@ -249,65 +249,80 @@ const char* Tokenizer_next(Tokenizer* tok) {
 
 	if(tok->m_token) {
 		free(tok->m_token);
-		tok->m_token = 0;
+		tok->m_token = NULL;
 		tok->m_token_size=tok->m_token_capacity = 0;
 	}
 
-	int quotMode=0;
+	char quotMode = 0;
 	int tokenComplete = 0;
-	while(tok->m_next_size || (tok->i < tok->s_size)) {
+	while (tok->m_next_size || (tok->i < tok->s_size)) {
 
-		if(tok->m_next_size) {
+		if (tok->m_next_size) {
 			Tokenizer_set(tok, tok->m_next, tok->m_next_size);
-			tok->m_next=0;
-			tok->m_next_size=0;
+			tok->m_next = NULL;
+			tok->m_next_size = 0;
 			return tok->m_token;
 		}
 
-		switch(tok->s[tok->i]) {
-			case '"':
-			case '\'':
-			if(tok->tagMode) {
-				if(!quotMode) quotMode=tok->s[tok->i];
-				else if(quotMode==tok->s[tok->i]) quotMode=0;
+		switch (tok->s[tok->i]) {
+		case '"':
+		case '\'':
+			if (tok->tagMode) {
+				// toggle quotation mode
+				if (!quotMode)
+					quotMode = tok->s[tok->i];
+				else
+					if (quotMode == tok->s[tok->i]) quotMode = 0;
 			}
 			Tokenizer_append(tok, tok->s[tok->i]);
 			break;
-			case '<':
-			if(!quotMode&&(tok->i+4<tok->s_size)&&(strncmp(tok->s+tok->i,"<!--",4)==0)) // strip comments
-				tok->i=find(tok->s, "-->", tok->i+4)+2;
-			else if(!quotMode&&(tok->i+9<tok->s_size)&&(strncmp(tok->s+tok->i,"<![CDATA[",9)==0)) { // interpet CDATA
-				size_t b=tok->i+9;
-				tok->i=find(tok->s, "]]>",b)+3;
-				if(!tok->m_token_size) return Tokenizer_set(tok, tok->s+b, tok->i-b-3);
+
+		case '<':
+			if (!quotMode && (tok->i + 4 < tok->s_size)
+						&& (strncmp(tok->s + tok->i, "<!--", 4) == 0))
+				tok->i = find(tok->s, "-->", tok->i + 4) + 2; // strip comments
+			else if (!quotMode && (tok->i + 9 < tok->s_size)
+						&& (strncmp(tok->s + tok->i, "<![CDATA[", 9) ==0)) {
+				// interpret CDATA
+				size_t b = tok->i + 9;
+				tok->i = find(tok->s, "]]>", b) + 3;
+				if (!tok->m_token_size)
+					return Tokenizer_set(tok, tok->s + b, tok->i - b - 3);
 				tokenComplete = 1;
-				tok->m_next = tok->s+b;
-				tok->m_next_size = tok->i-b-3;
+				tok->m_next = tok->s + b;
+				tok->m_next_size = tok->i - b - 3;
 				--tok->i;
 			}
-			else if(!quotMode&&(tok->i+1<tok->s_size)&&((tok->s[tok->i+1]=='?')||(tok->s[tok->i+1]=='!'))) // strip meta information
-				tok->i=find(tok->s, ">", tok->i+2);
-			else if(!quotMode&&!tok->tagMode) {
-				if((tok->i+1<tok->s_size)&&(tok->s[tok->i+1]=='/')) {
-					tok->m_next=ESC_str;
+			else if (!quotMode && (tok->i + 1 < tok->s_size)
+						&& ((tok->s[tok->i + 1] == '?')
+							|| (tok->s[tok->i + 1] == '!')))
+				tok->i=find(tok->s, ">", tok->i + 2); // strip meta information
+			else if (!quotMode && !tok->tagMode) {
+				if ((tok->i + 1 < tok->s_size)
+						&& (tok->s[tok->i + 1] == '/')) {
+					// "</" sequence that starts a closing tag
+					tok->m_next = ESC_str;
 					tok->m_next_size = 1;
-					tok->i=find(tok->s, ">", tok->i+2);
-				}
-				else {
+					tok->i=find(tok->s, ">", tok->i + 2);
+				} else {
+					// regular '<' opening a new tag
 					tok->m_next = OPEN_str;
 					tok->m_next_size = 1;
-					tok->tagMode=1;
+					tok->tagMode = 1;
 				}
 				tokenComplete = 1;
 			}
 			else Tokenizer_append(tok, tok->s[tok->i]);
 			break;
-			case '/':
-			if(tok->tagMode&&!quotMode) {
+
+		case '/':
+			if (tok->tagMode && !quotMode) {
 				tokenComplete = 1;
-				if((tok->i+1 < tok->s_size) && (tok->s[tok->i+1]=='>')) {
-					tok->tagMode=0;
-					tok->m_next=ESC_str;
+				if ((tok->i + 1 < tok->s_size)
+						&& (tok->s[tok->i + 1] == '>')) {
+					// "/>" sequence = end of 'empty' tag
+					tok->tagMode = 0;
+					tok->m_next = ESC_str;
 					tok->m_next_size = 1;
 					++tok->i;
 				}
@@ -315,35 +330,41 @@ const char* Tokenizer_next(Tokenizer* tok) {
 			}
 			else Tokenizer_append(tok, tok->s[tok->i]);
 			break;
-			case '>':
-			if(!quotMode&&tok->tagMode) {
-				tok->tagMode=0;
+
+		case '>':
+			if (!quotMode && tok->tagMode) {
+				// this '>' closes the current tag
+				tok->tagMode = 0;
 				tokenComplete = 1;
 				tok->m_next = CLOSE_str;
 				tok->m_next_size = 1;
 			}
 			else Tokenizer_append(tok, tok->s[tok->i]);
 			break;
-			case ' ':
-			case '\r':
-			case '\n':
-			case '\t':
-			if(tok->tagMode&&!quotMode) {
-				if(tok->m_token_size) tokenComplete=1;
+
+		case ' ':
+		case '\r':
+		case '\n':
+		case '\t':
+			if (tok->tagMode && !quotMode) {
+				// within a tag, any unquoted whitespace ends the current token (= attribute)
+				if (tok->m_token_size) tokenComplete = 1;
 			}
 			else
 				if (tok->m_token_size || tok->mode != WHITESPACE_TRIM)
 					Tokenizer_append(tok, tok->s[tok->i]);
 			break;
-			default: Tokenizer_append(tok, tok->s[tok->i]);
+
+		default:
+			Tokenizer_append(tok, tok->s[tok->i]);
 		}
 		++tok->i;
-		if((tok->i>=tok->s_size)||(tokenComplete&&tok->m_token_size)) {
-			tokenComplete=0;
+		if (tok->i >= tok->s_size || (tokenComplete && tok->m_token_size)) {
+			tokenComplete = 0;
 			if (tok->mode == WHITESPACE_TRIM) // trim whitespace
 				while (tok->m_token_size && isspace(tok->m_token[tok->m_token_size - 1]))
 					tok->m_token[--tok->m_token_size] = 0;
-			if(tok->m_token_size) break;
+			if (tok->m_token_size) break;
 		}
 	}
 	Tokenizer_print(tok);
