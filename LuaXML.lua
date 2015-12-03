@@ -12,21 +12,6 @@ that they are found in Lua's package search path.
 ]]--
 local _M = require("LuaXML_lib")
 
---[[-- appends a new subordinate LuaXML object to an existing one.
-optionally sets tag
-
-@function append
-@param var  the parent LuaXML object
-@tparam ?string tag  the tag of the appended LuaXML object
-@return  appended LuaXML object, or `nil` in case of errors
-]]--
-function _M.append(var, tag)
-	if type(var) ~= "table" then return end
-	local newVar = _M.new(tag)
-	var[#var + 1] = newVar
-	return newVar
-end
-
 --[[-- saves a Lua var as XML file.
 Basically this simply exports the string representation `xml.str(var)`
 (or `var:str()`), plus a standard header.
@@ -126,30 +111,6 @@ function _M.children(var, tag, key, value, maxdepth)
 	-- our "invariant state" will be a table of matched children
 	return child_iterator,
 		get_children(var, tag, key, value, maxdepth)
-end
-
---[[-- recursively searches a Lua table for a subelement
-matching the provided tag and attribute. See the description of `match` for
-the logic involved with testing for` tag`, `key` and `value`.
-
-@function find
-@param var  the table to be searched in
-@tparam ?string tag  the XML tag to be found
-@tparam ?string key  the attribute key (= exact name) to be found
-@param value (optional)  the attribute value to be found
-@return  the first (sub-)table that satisfies the search condition,
-or `nil` for no match
-]]--
-function _M.find(var, tag, key, value)
-	-- "find" = recursive iteration that will stop on (and return) first match
-	local match
-	_M.iterate(var,
-		function(node, depth)
-			match = node
-			return false -- (stop iteration)
-		end,
-		tag, key, value, true)
-	return match
 end
 
 return _M -- return module (table)
