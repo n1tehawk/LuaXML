@@ -537,57 +537,58 @@ int Xml_eval(lua_State *L) {
 	lua_settop(L, 1);
 	const char *token;
 	int firstStatement = 1;
-	while((token=Tokenizer_next(tok))!=0) if (*token == OPN) { // new tag found
-		if(lua_gettop(L) > 1) {
-			lua_newtable(L);
-			lua_pushvalue(L, -1); // duplicate table (keep one copy on stack)
-			lua_rawseti(L, -3, lua_rawlen(L, -3) + 1);
-		}
-		else {
-			if (firstStatement) {
+	while ((token=Tokenizer_next(tok)))
+		if (*token == OPN) { // new tag found
+			if (lua_gettop(L) > 1) {
 				lua_newtable(L);
-				firstStatement = 0;
+				lua_pushvalue(L, -1); // duplicate table (keep one copy on stack)
+				lua_rawseti(L, -3, lua_rawlen(L, -3) + 1); // set parent subelement
+			} else {
+				if (firstStatement) {
+					lua_newtable(L);
+					firstStatement = 0;
+				}
+				else return 0;
 			}
-			else return 0;
-		}
-		make_xml_object(L, -1); // assign metatable
+			make_xml_object(L, -1); // assign metatable
 
-		// parse tag and content:
-		push_TAG_key(L); // place tag key on top of stack
-		lua_pushstring(L, Tokenizer_next(tok));
-		lua_rawset(L, -3);
+			// parse tag and content:
+			push_TAG_key(L); // place tag key on top of stack
+			lua_pushstring(L, Tokenizer_next(tok));
+			lua_rawset(L, -3);
 
-		while(((token = Tokenizer_next(tok))!=0)&&(*token != CLS)&&(*token != ESC)) { // parse tag header
-			size_t sepPos=find(token, "=", 0);
-			if(token[sepPos]) { // regular attribute
-				const char* aVal =token+sepPos+2;
-				lua_pushlstring(L, token, sepPos);
-				Xml_pushDecode(L, aVal, strlen(aVal) - 1);
-				lua_rawset(L, -3);
+			while ((token = Tokenizer_next(tok)) && (*token != CLS) && (*token != ESC)) {
+				// parse tag header
+				size_t sepPos = find(token, "=", 0);
+				if (token[sepPos]) { // regular attribute (key="value")
+					const char *aVal = token + sepPos + 2;
+					lua_pushlstring(L, token, sepPos);
+					Xml_pushDecode(L, aVal, strlen(aVal) - 1);
+					lua_rawset(L, -3);
+				}
+			}
+			if (!token || (*token == ESC)) {
+				// this tag has no content, only attributes
+				if (lua_gettop(L) > 2) lua_pop(L, 1); else break;
 			}
 		}
-		if (!token || (*token == ESC)) {
-			if (lua_gettop(L) > 2) lua_settop(L,-2); // this tag has no content, only attributes
+		else if (*token == ESC) { // previous tag is over
+			if (lua_gettop(L) > 2) lua_pop(L, 1); // pop current table
 			else break;
 		}
-	}
-	else if (*token == ESC) { // previous tag is over
-		if (lua_gettop(L) > 2) lua_settop(L,-2); // pop current table
-		else break;
-	}
-	else { // read elements
-		if (lua_gettop(L) > 1) {
-			// when normalizing, we'll ignore tokens we consider "lead-in" type
-			if (mode != WHITESPACE_NORMALIZE || !is_lead_token(token)) {
-				Xml_pushDecode(L, token, -1);
-				lua_rawseti(L, -2, lua_rawlen(L, -2) + 1);
+		else { // read elements
+			if (lua_gettop(L) > 1) {
+				// when normalizing, we ignore tokens considered "lead-in" type
+				if (mode != WHITESPACE_NORMALIZE || !is_lead_token(token)) {
+					Xml_pushDecode(L, token, -1);
+					lua_rawseti(L, -2, lua_rawlen(L, -2) + 1);
+				}
 			}
+			else // element stack is empty, i.e. we encountered a token *before* any tag
+				if (!is_whitespace(token))
+					luaL_error(L, "Malformed XML: non-empty string '%s' before any tag (parser pos %d)",
+							   token, (int)tok->i);
 		}
-		else // element stack is empty, i.e. we encountered a token *before* any tag
-			if (!is_whitespace(token))
-				luaL_error(L, "Malformed XML: non-empty string '%s' before any tag (parser pos %d)",
-						   token, (int)tok->i);
-	}
 	Tokenizer_delete(tok);
 	return lua_gettop(L) - 1;
 }
