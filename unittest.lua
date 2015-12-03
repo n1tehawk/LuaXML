@@ -32,6 +32,11 @@ function TestXml:test_basics()
 	foobar = xml.new({bar = false}, "foo")
 	lu.assertEquals(foobar:str(), '<foo bar="false" />\n')
 
+	-- mimic the append() example from the README
+	foobar = xml.new("root")
+	foobar:append("child")[1] = 123
+	lu.assertEquals(foobar[1]:str(), "<child>123</child>\n")
+
 	-- proper handling of an empty attribute
 	local foo = '<tag attr="" />\n'
 	foobar = xml.eval(foo)

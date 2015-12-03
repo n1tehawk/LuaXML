@@ -146,6 +146,22 @@ static int XMLencoding_replacement(lua_State *L) {
 	return 0;
 }
 
+/* Lua C callback function for a `find()` match. Sets the upvalue (that will
+ * later be the result) and stops the iteration.
+ *
+ * A small problem here is that the callback handling by iterate() means this
+ * function cannot simply return the result on the Lua stack. Instead we need
+ * a "shared" upvalue that can be retrieved 'externally' later. Therefore a
+ * simple, 'flat' Lua value won't do (it can't be shared); so we'll use a table
+ * instead and assign the match to t[1].
+ */
+static int find_on_match(lua_State *L) {
+	// Upon entry the Lua stack will have `var` and `depth`
+	lua_settop(L, 1); // discard depth, leaving var on the stack
+	lua_rawseti(L, lua_upvalueindex(1), 1); // store to upvalue table
+	lua_pushboolean(L, false); // return false to stop iteration
+	return 1;
+}
 
 /// strip all leading / trailing whitespace
 //  @field WS_TRIM
@@ -456,6 +472,27 @@ int Xml_new(lua_State *L) {
 	}
 	lua_settop(L, 1);
 	return 1;
+}
+
+/** appends a new subordinate LuaXML object to an existing one.
+optionally sets tag
+
+@function append
+@param var  the parent LuaXML object
+@tparam ?string tag  the tag of the appended LuaXML object
+@return  appended LuaXML object, or `nil` in case of errors
+*/
+int Xml_append(lua_State *L) {
+	if (lua_type(L, 1) == LUA_TTABLE) {
+		lua_settop(L, 2);
+		lua_pushcfunction(L, Xml_new);
+		lua_insert(L, 2);
+		lua_call(L, 1, 1); // new(tag)
+		lua_pushvalue(L, -1); // duplicate result
+		lua_rawseti(L, 1, lua_rawlen(L, 1) + 1); // append to parent (elements)
+		return 1;
+	}
+	return 0;
 }
 
 // Push XML-encoded string for the Lua value at given index.
@@ -1019,20 +1056,55 @@ int Xml_iterate(lua_State *L) {
 	return 2;
 }
 
+/** recursively searches a Lua table for a subelement
+matching the provided tag and attribute. See the description of `match` for
+the logic involved with testing for` tag`, `key` and `value`.
+
+@function find
+@param var  the table to be searched in
+@tparam ?string tag  the XML tag to be found
+@tparam ?string key  the attribute key (= exact name) to be found
+@param value (optional)  the attribute value to be found
+@return  the first (sub-)table that satisfies the search condition,
+or `nil` for no match
+*/
+int Xml_find(lua_State *L) {
+	lua_settop(L, 4); // accept at most four parameters for this function
+
+	lua_newtable(L); // upon a match, this table will receive our result as t[1]
+	lua_insert(L, 1); // (move it before anything else)
+
+	lua_pushcfunction(L, Xml_iterate);
+	lua_insert(L, 2); // iterate is now stack arg #2, `var` at #3
+	lua_pushvalue(L, 1); // duplicate the table (for use as upvalue)
+	lua_pushcclosure(L, find_on_match, 1); // create a C closure
+	lua_insert(L, 4); // place the callback function (closure) at #4
+	// (`tag`, `key` and `value` have moved to #5, #6 and #7 respectively)
+	lua_pushboolean(L, true); // set "recursive" flag (#8)
+
+	// iterate(var, find_on_match, tag, key, value, true), discarding results
+	// (but if something matches, we expect that `find_on_match` sets t[1])
+	lua_call(L, 6, 0);
+	lua_rawgeti(L, 1, 1);
+	return 1; // returns result[1], which may be `nil` (if no match)
+}
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 int _EXPORT luaopen_LuaXML_lib (lua_State* L) {
 	static const struct luaL_Reg funcs[] = {
-		{"tag", Xml_tag},
-		{"new", Xml_new},
-		{"load", Xml_load},
-		{"eval", Xml_eval},
+		{"append", Xml_append},
 		{"encode", Xml_encode},
-		{"str", Xml_str},
-		{"match", Xml_match},
+		{"eval", Xml_eval},
+		{"find", Xml_find},
 		{"iterate", Xml_iterate},
+		{"load", Xml_load},
+		{"match", Xml_match},
+		{"new", Xml_new},
 		{"registerCode", Xml_registerCode},
+		{"str", Xml_str},
+		{"tag", Xml_tag},
 		{NULL, NULL}
 	};
 	luaL_newlib(L, funcs);
