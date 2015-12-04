@@ -44,15 +44,29 @@
 <div id="content">
 
 <h1>Module <code>LuaXML</code></h1>
-<p>To use LuaXML, first import the module &ndash; for example like this:</p>
+<p>A module that maps between Lua and XML without much ado.</p>
+<p>LuaXML provides a set of functions for processing XML data in Lua.
+It offers a very simple and natural mapping between the XML format and Lua tables,
+which allows one to work with and construct XML data just using Lua&rsquo;s normal
+table access and iteration methods (e.g. <code>ipairs()</code>).</p>
+
+<p>Substatements and tag content are represented as array data having numerical
+keys (<code>1 .. n</code>), attributes use string keys, and tags the numerical index <code>0</code>.
+This representation makes sure that the structure of XML data is preserved
+exactly across read/write cycles (i.e. <code>xml.eval(var:str())</code> should equal <code>var</code>
+again).</p>
+
+<hr />
+
+<br>To use LuaXML, first import the module - for example like this:
+
 
 <pre><code>local xml = require("LuaXML")
 </code></pre>
 
 <p>LuaXML consists of a Lua file (<code>LuaXML.lua</code>) and a corresponding C module
 (<code>LuaXML_lib</code>) &ndash; normally a shared library (<code>.dll</code>/<code>.so</code>), although a static
-linking is possible as well.</p>
-<p> Both parts are imported by this call, provided
+linking is possible as well. Both parts are imported by this call, provided
 that they are found in Lua&rsquo;s package search path.</p>
 
 <p>&nbsp;</p>
