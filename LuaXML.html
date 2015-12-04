@@ -69,6 +69,10 @@ that they are found in Lua&rsquo;s package search path.</p>
 	<td class="summary">iterate subelements (&ldquo;XML children&rdquo;) as <em>key &ndash; value</em> pairs.</td>
 	</tr>
 	<tr>
+	<td class="name" nowrap><a href="#decode">decode (str)</a></td>
+	<td class="summary">converts a string from XML encoding.</td>
+	</tr>
+	<tr>
 	<td class="name" nowrap><a href="#encode">encode (str)</a></td>
 	<td class="summary">converts a string to XML encoding.</td>
 	</tr>
@@ -253,6 +257,46 @@ for a <code>for</code> loop
 
 </dd>
     <dt>
+    <a name = "decode"></a>
+    <strong>decode (str)</strong>
+    </dt>
+    <dd>
+    converts a string from XML encoding.
+This function transforms<code> str</code> by replacing any special XML encodings with
+their &ldquo;plain text&rdquo; counterparts.
+
+
+    <h3>Parameters:</h3>
+    <ul>
+        <li><span class="parameter">str</span>
+            <span class="types"><a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+          string to be transformed
+        </li>
+    </ul>
+
+    <h3>Returns:</h3>
+    <ol>
+
+           <span class="types"><a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
+        the decoded string
+    </ol>
+
+
+    <h3>See also:</h3>
+    <ul>
+         <li><a href="LuaXML.html#encode">encode</a></li>
+         <li><a href="LuaXML.html#registerCode">registerCode</a></li>
+    </ul>
+
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example">
+<span class="global">print</span>((xml.decode(<span class="string">"&amp;lt;-&amp;gt;"</span>)) <span class="comment">-- "&lt;-&gt;"
+</span></pre>
+    </ul>
+
+</dd>
+    <dt>
     <a name = "encode"></a>
     <strong>encode (str)</strong>
     </dt>
@@ -280,9 +324,16 @@ suitable XML encodings.
 
     <h3>See also:</h3>
     <ul>
-         <a href="LuaXML.html#registerCode">registerCode</a>
+         <li><a href="LuaXML.html#decode">decode</a></li>
+         <li><a href="LuaXML.html#registerCode">registerCode</a></li>
     </ul>
 
+    <h3>Usage:</h3>
+    <ul>
+        <pre class="example">
+<span class="global">print</span>(xml.encode(<span class="string">"&lt;-&gt;"</span>)) <span class="comment">-- "&amp;lt;-&amp;gt;"
+</span></pre>
+    </ul>
 
 </dd>
     <dt>
@@ -616,7 +667,8 @@ by explictly registering a <code>nil</code> value: <code>registerCode(decoded, n
 
     <h3>See also:</h3>
     <ul>
-         <a href="LuaXML.html#encode">encode</a>
+         <li><a href="LuaXML.html#encode">encode</a></li>
+         <li><a href="LuaXML.html#decode">decode</a></li>
     </ul>
 
 

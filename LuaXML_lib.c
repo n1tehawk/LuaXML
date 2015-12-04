@@ -567,6 +567,7 @@ static void Xml_pushEncodeStr(lua_State *L, const char *s, int size) {
 }
 */
 
+// Push Lua representation of the given string, while decoding any special XML encodings
 static void Xml_pushDecode(lua_State *L, const char *s, int size) {
 	if (size == 0) {
 		lua_pushliteral(L, "");
@@ -741,7 +742,7 @@ by explictly registering a `nil` value: `registerCode(decoded, nil)`.
 @function registerCode
 @tparam string decoded  the character (sequence) to be used within Lua
 @tparam string encoded  the character entity to be used in XML
-@see encode
+@see encode, decode
 */
 int Xml_registerCode(lua_State *L) {
 	// We require the "decoded" string, but allow `nil` as argument #2.
@@ -760,14 +761,36 @@ int Xml_registerCode(lua_State *L) {
 This function transforms` str` by replacing any special characters with
 suitable XML encodings.
 
+@usage
+print(xml.encode("<->")) -- "&lt;-&gt;"
+
 @function encode
 @tparam string str  string to be transformed
 @treturn string  the XML-encoded string
-@see registerCode
+@see decode, registerCode
 */
 int Xml_encode(lua_State *L) {
 	luaL_checkstring(L, 1); // make sure arg #1 is a string
 	Xml_pushEncode(L, 1); // and convert it
+	return 1;
+}
+
+/** converts a string from XML encoding.
+This function transforms` str` by replacing any special XML encodings with
+their "plain text" counterparts.
+
+@usage
+print((xml.decode("&lt;-&gt;")) -- "<->"
+
+@function decode
+@tparam string str  string to be transformed
+@treturn string  the decoded string
+@see encode, registerCode
+*/
+int Xml_decode(lua_State *L) {
+	size_t size;
+	luaL_checklstring(L, 1, &size); // make sure arg #1 is a string
+	Xml_pushDecode(L, lua_tostring(L, 1), size); // and convert it
 	return 1;
 }
 
@@ -1139,6 +1162,7 @@ extern "C" {
 int _EXPORT luaopen_LuaXML_lib (lua_State* L) {
 	static const struct luaL_Reg funcs[] = {
 		{"append", Xml_append},
+		{"decode", Xml_decode},
 		{"encode", Xml_encode},
 		{"eval", Xml_eval},
 		{"find", Xml_find},
