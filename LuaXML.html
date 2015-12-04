@@ -291,14 +291,22 @@ suitable XML encodings.
     </dt>
     <dd>
     parses an XML string into a Lua table.
+The table will contain a representation of the XML tag, attributes (and their
+values), and element content / subelements (either as strings or nested LuaXML
+&ldquo;objects&rdquo;).</p>
+
+<p>Note: Parsing &ldquo;wide&rdquo; strings or Unicode (UCS-2, UCS-4, UTF-16) currently is
+<strong>not</strong> supported. If needed, convert such <code>xml</code> data to UTF-8 before passing it
+to <code>eval()</code>. UTF-8 should be safe to use, and this function will also recognize
+and ignore a UTF-8 BOM (byte order mark) at the start of <code>xml</code>.
 
 
     <h3>Parameters:</h3>
     <ul>
         <li><span class="parameter">xml</span>
-            <span class="types"><a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a></span>
-        the string to be converted. <code>xml</code> may also be a userdata value pointing to
-a C-style (NUL-terminated) string.
+            <span class="types"><a class="type" href="http://www.lua.org/manual/5.1/manual.html#5.4">string</a> or <span class="type">userdata</span></span>
+        the XML to be converted. When passing a userdata type <code>xml</code> value, it must
+point to a C-style (NUL-terminated) string.
         </li>
         <li><span class="parameter">mode</span>
             <span class="types">optional <span class="type">number</span></span>

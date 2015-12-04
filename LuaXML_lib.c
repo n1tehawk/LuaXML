@@ -569,11 +569,20 @@ static void Xml_pushDecode(lua_State *L, const char *s, int size) {
 }
 
 /** parses an XML string into a Lua table.
+The table will contain a representation of the XML tag, attributes (and their
+values), and element content / subelements (either as strings or nested LuaXML
+"objects").
+
+Note: Parsing "wide" strings or Unicode (UCS-2, UCS-4, UTF-16) currently is
+__not__ supported. If needed, convert such `xml` data to UTF-8 before passing it
+to `eval()`. UTF-8 should be safe to use, and this function will also recognize
+and ignore a UTF-8 BOM (byte order mark) at the start of `xml`.
+
 @function eval
 
-@tparam string xml
-the string to be converted. `xml` may also be a userdata value pointing to
-a C-style (NUL-terminated) string.
+@tparam string|userdata xml
+the XML to be converted. When passing a userdata type `xml` value, it must
+point to a C-style (NUL-terminated) string.
 
 @tparam ?number mode
 whitespace handling mode, one of the `WS_*` constants - see [Fields](#Fields).
@@ -590,6 +599,12 @@ int Xml_eval(lua_State *L) {
 		str_size = strlen(str);
 	}
 	else str = luaL_checklstring(L, 1, &str_size);
+
+	if (str_size >= 3 && strncmp(str, "\xEF\xBB\xBF", 3) == 0) {
+		// ignore / skip over UTF-8 BOM (byte order mark)
+		str += 3;
+		str_size -= 3;
+	}
 
 	Tokenizer *tok = Tokenizer_new(str, str_size, mode);
 	lua_settop(L, 1);
