@@ -66,6 +66,10 @@ function TestXml:test_basics()
 	-- invalid XML
 	lu.assertErrorMsgContains("Malformed XML", xml.eval, "foo<bar/>")
 
+	-- UTF-8 BOM (byte order mark)
+	foobar = xml.eval("\239\187\191<foo/>")
+	lu.assertEquals(foobar[0], "foo")
+
 	-- check load error
 	lu.assertErrorMsgContains("file error or file not found",
 		xml.load, "invalid_filename")
