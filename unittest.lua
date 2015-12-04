@@ -6,8 +6,11 @@ local xml = require('LuaXML')
 TestXml = {} -- the test suite
 
 function TestXml:test_basics()
-	-- encoding of 'signed' character
+	-- encoding / decoding XML representations
 	lu.assertEquals(xml.encode("\128"), "&#128;")
+	lu.assertEquals(xml.decode("&#128;"), "\128")
+	lu.assertEquals(xml.encode("<->"), "&lt;-&gt;")
+	lu.assertEquals(xml.decode("&lt;-&gt;"), "<->")
 
 	-- check metatable of newly created object
 	local foobar = xml.new()
