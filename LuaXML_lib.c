@@ -126,6 +126,22 @@ static bool is_lead_token(const char *s) {
 }
 
 /*
+ * For the string at given stack index, substitute any occurrence (exact string
+ * match) of pattern "p" with the replacement string "r".
+ * When done, this function will replace the original string with the result.
+ */
+// TODO / Caveat:
+// We return the luaL_gsub() pointer, but it's unclear (and untested) if that
+// persists after the lua_replace(). Currently the result isn't used anywhere.
+static const char *do_gsub(lua_State *L, int index, const char *p, const char *r)
+{
+	if (index < 0) index += lua_gettop(L) + 1; // relative to absolute index
+	const char *result = luaL_gsub(L, lua_tostring(L, index), p, r);
+	lua_replace(L, index);
+	return result;
+}
+
+/*
  * Lua C function to replace a gsub() match with the corresponding character.
  * Xml_pushDecode() will use this as a replacement function argument to undo
  * the XML encodings, passing one match (sequence of digits) at a time.
@@ -507,6 +523,9 @@ static void Xml_pushEncode(lua_State *L, int index) {
 		lua_call(L, 1, 1); // tostring()
 	}
 
+	// always do "&amp;" first
+	// (avoids later affecting other substitutions, which may contain '&')
+	do_gsub(L, -1, "&", "&amp;");
 	// encode special entities
 	size_t i;
 	for (i = 0; i < sv_code_size; i += 2) {
@@ -566,6 +585,7 @@ static void Xml_pushDecode(lua_State *L, const char *s, int size) {
 		luaL_gsub(L, lua_tostring(L,-1), sv_code[i], sv_code[i-1]);
 		lua_remove(L,-2);
 	}
+	do_gsub(L, -1, "&amp;", "&"); // this should always be done last
 }
 
 /** parses an XML string into a Lua table.
@@ -1145,8 +1165,8 @@ int _EXPORT luaopen_LuaXML_lib (lua_State* L) {
 	// register default codes:
 	if(!sv_code) {
 		sv_code=malloc(sv_code_capacity * sizeof(char*));
-		sv_code[sv_code_size++]="&";
-		sv_code[sv_code_size++]="&amp;";
+		//sv_code[sv_code_size++]="&";
+		//sv_code[sv_code_size++]="&amp;";
 		sv_code[sv_code_size++]="<";
 		sv_code[sv_code_size++]="&lt;";
 		sv_code[sv_code_size++]=">";
