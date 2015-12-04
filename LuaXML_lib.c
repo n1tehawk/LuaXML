@@ -405,12 +405,8 @@ const char *Tokenizer_next(Tokenizer *tok) {
 
 //--- local variables ----------------------------------------------
 
-/// stores number of special character codes
-static size_t sv_code_size=0;
-/// stores currently allocated capacity for special character codes
-static size_t sv_code_capacity=16;
-/// stores code table for special characters
-static char** sv_code=0;
+// 'private' table mapping between special chars and their XML substitutions
+static int sv_code_ref; // (will receive a LUA reference)
 
 //--- public methods -----------------------------------------------
 
@@ -526,12 +522,19 @@ static void Xml_pushEncode(lua_State *L, int index) {
 	// always do "&amp;" first
 	// (avoids later affecting other substitutions, which may contain '&')
 	do_gsub(L, -1, "&", "&amp;");
-	// encode special entities
-	size_t i;
-	for (i = 0; i < sv_code_size; i += 2) {
-		luaL_gsub(L, lua_tostring(L, -1), sv_code[i], sv_code[i + 1]);
-		lua_replace(L, -2);
+
+	// encode other special entities
+	lua_rawgeti(L, LUA_REGISTRYINDEX, sv_code_ref);
+	lua_pushnil(L);
+	while (lua_next(L, -2)) {
+		// Lua stack has string to work on (-4), substitution table (-3),
+		// table key (-2 = special char) and value (-1 = replacement)
+		// (We want to replace the original char with the XML encoding.)
+		do_gsub(L, -4, lua_tostring(L, -2), lua_tostring(L, -1));
+		lua_pop(L, 1); // pop value, leaving key for the next iteration
 	}
+	lua_pop(L, 1); // pop substitution table to realign the stack
+
 	// transfer string one character at a time, encoding any chars with MSB set
 	char buf[8];
 	const unsigned char *s = (unsigned char *)lua_tostring(L, -1);
@@ -541,8 +544,8 @@ static void Xml_pushEncode(lua_State *L, int index) {
 		if (*s < 128)
 			luaL_addchar(&b, *s); // copy character literally
 		else {
-			i = snprintf(buf, sizeof(buf), "&#%d;", *s); // encode char
-			luaL_addlstring(&b, buf, i);
+			int len = snprintf(buf, sizeof(buf), "&#%d;", *s); // encode char
+			luaL_addlstring(&b, buf, len);
 		}
 		s++;
 	}
@@ -580,11 +583,16 @@ static void Xml_pushDecode(lua_State *L, const char *s, int size) {
 	lua_pushcfunction(L, XMLencoding_replacement); // replacement func (arg #3)
 	lua_call(L, 3, 1); // three parameters, one result (the substituted string)
 
-	size_t i;
-	for(i=sv_code_size-1; i<sv_code_size; i-=2) {
-		luaL_gsub(L, lua_tostring(L,-1), sv_code[i], sv_code[i-1]);
-		lua_remove(L,-2);
+	lua_rawgeti(L, LUA_REGISTRYINDEX, sv_code_ref);
+	lua_pushnil(L);
+	while (lua_next(L, -2)) {
+		// Lua stack has string to work on (-4), substitution table (-3),
+		// table key (-2 = special char) and value (-1 = replacement)
+		// (We want to replace the XML encoding with the original char.)
+		do_gsub(L, -4, lua_tostring(L, -1), lua_tostring(L, -2));
+		lua_pop(L, 1); // pop value, leaving key for the next iteration
 	}
+	lua_pop(L, 1); // pop substitution table, leaving result string on stack
 	do_gsub(L, -1, "&amp;", "&"); // this should always be done last
 }
 
@@ -718,10 +726,17 @@ int Xml_load (lua_State *L) {
 and XML character entities.
 
 By default, only the most basic entities are known to LuaXML:
-	" & < > '
-ANSI codes above 127 are directly converted to the XML character codes of the
-same number. If more character codes are needed, they can be registered using
-this function.
+	" < > '
+On top (and independent) of that, the **ampersand** sign always gets encoded /
+decoded separately: `&amp;` &harr; `&amp;amp;`. Character codes above 127 are
+directly converted to an appropriate XML encoding, representing the character
+number (e.g. `&amp;#160;`). If other special encodings are needed, they can be
+registered using this function.
+
+Note: LuaXML now manages these encodings in a (private) standard Lua table.
+This allows you to replace entries by calling `registerCode()` again, using the
+same `decoded` and a different `encoded`. Encodings may even be removed later,
+by explictly registering a `nil` value: `registerCode(decoded, nil)`.
 
 @function registerCode
 @tparam string decoded  the character (sequence) to be used within Lua
@@ -729,21 +744,15 @@ this function.
 @see encode
 */
 int Xml_registerCode(lua_State *L) {
-	const char * decoded = luaL_checkstring(L,1);
-	const char * encoded = luaL_checkstring(L,2);
+	// We require the "decoded" string, but allow `nil` as argument #2.
+	// That way, users may remove entries from the table again.
+	luaL_checkstring(L, 1);
+	if (!lua_isnoneornil(L, 2)) luaL_checkstring(L, 2);
 
-	size_t i;
-	for(i=0; i<sv_code_size; i+=2)
-		if(strcmp(sv_code[i],decoded)==0)
-			return luaL_error(L,"LuaXML ERROR: code already exists.");
-	if(sv_code_size+2>sv_code_capacity) {
-		sv_code_capacity*=2;
-		sv_code = realloc(sv_code, sv_code_capacity * sizeof(char*));
-	}
-	sv_code[sv_code_size]=malloc(strlen(decoded) + 1);
-	strcpy(sv_code[sv_code_size++], decoded);
-	sv_code[sv_code_size]=malloc(strlen(encoded) + 1);
-	strcpy(sv_code[sv_code_size++],encoded);
+	lua_settop(L, 2);
+	lua_rawgeti(L, LUA_REGISTRYINDEX, sv_code_ref); // get translation table
+	lua_insert(L, 1);
+	lua_rawset(L, 1); // assign key-value pair (k "decoded" -> v "encoded")
 	return 0;
 }
 
@@ -1162,21 +1171,20 @@ int _EXPORT luaopen_LuaXML_lib (lua_State* L) {
 	lua_pushinteger(L, WHITESPACE_PRESERVE);
 	lua_setfield(L, -2, "WS_PRESERVE");
 
-	// register default codes:
-	if(!sv_code) {
-		sv_code=malloc(sv_code_capacity * sizeof(char*));
-		//sv_code[sv_code_size++]="&";
-		//sv_code[sv_code_size++]="&amp;";
-		sv_code[sv_code_size++]="<";
-		sv_code[sv_code_size++]="&lt;";
-		sv_code[sv_code_size++]=">";
-		sv_code[sv_code_size++]="&gt;";
-		sv_code[sv_code_size++]="\"";
-		sv_code[sv_code_size++]="&quot;";
-		sv_code[sv_code_size++]="'";
-		sv_code[sv_code_size++]="&apos;";
-	}
-	return 1;
+	// register default codes
+	// Note: We'll always handle "&amp;" separately!
+	lua_newtable(L);
+	lua_pushliteral(L, "&lt;");
+	lua_setfield(L, -2, "<");
+	lua_pushliteral(L, "&gt;");
+	lua_setfield(L, -2, ">");
+	lua_pushliteral(L, "&quot;");
+	lua_setfield(L, -2, "\"");
+	lua_pushliteral(L, "&apos;");
+	lua_setfield(L, -2, "'");
+	sv_code_ref = luaL_ref(L, LUA_REGISTRYINDEX); // reference (and pop table)
+
+	return 1; // return module (table)
 }
 #ifdef __cplusplus
 } // extern "C"
