@@ -51,6 +51,15 @@ function TestXml:test_basics()
 	lu.assertEquals(xml.eval("<bar>&#32;</bar>")[1], " ")
 	lu.assertEquals(xml.eval("<foobar>&apos;&#9;&apos;</foobar>")[1], "'\t'")
 
+	-- custom encodings
+	xml.registerCode("\160", " ")
+	lu.assertEquals(xml.encode("\160"), " ")
+	xml.registerCode("\160", "&nbsp;") -- replace existing entry
+	lu.assertEquals(xml.encode("\160"), "&nbsp;")
+	lu.assertEquals(xml.eval("<foo>&nbsp;</foo>")[1], "\160")
+	xml.registerCode("\160", nil) -- remove entry (revert to standard encoding)
+	lu.assertEquals(xml.encode("\160"), "&#160;")
+
 	-- enhanced whitespace handling
 	lu.assertEquals(xml.eval("<foo> </foo>"):str(), "<foo />\n") -- default mode
 	lu.assertEquals(xml.eval("<foo> </foo>", xml.WS_TRIM):str(), "<foo />\n")
