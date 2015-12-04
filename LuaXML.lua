@@ -1,5 +1,21 @@
 --[[--
-To use LuaXML, first import the module - for example like this:
+
+A module that maps between Lua and XML without much ado.
+
+LuaXML provides a set of functions for processing XML data in Lua.
+It offers a very simple and natural mapping between the XML format and Lua tables,
+which allows one to work with and construct XML data just using Lua's normal
+table access and iteration methods (e.g. `ipairs()`).
+
+Substatements and tag content are represented as array data having numerical
+keys (`1 .. n`), attributes use string keys, and tags the numerical index `0`.
+This representation makes sure that the structure of XML data is preserved
+exactly across read/write cycles (i.e. `xml.eval(var:str())` should equal `var`
+again).
+
+---
+
+<br>To use LuaXML, first import the module - for example like this:
 	local xml = require("LuaXML")
 
 LuaXML consists of a Lua file (`LuaXML.lua`) and a corresponding C module
@@ -9,7 +25,7 @@ that they are found in Lua's package search path.
 
 &nbsp;
 @module LuaXML
-]]--
+]]
 local _M = require("LuaXML_lib")
 
 --[[-- saves a Lua var as XML file.
@@ -37,7 +53,7 @@ newline. Defaults to the standard XML 1.0 declaration:
 var:save("simple.xml")
 var:save("no-comment.xml", nil, "")
 var:save("custom.xml", "a+", "<!-- append mode, no header -->\n", "")
-]]--
+]]
 function _M.save(var, filename, filemode, comment, header)
 	if var and filename and #filename > 0 then
 		local file, err = io.open(filename, filemode or "w")
@@ -105,7 +121,7 @@ end
 -- 1       a       nil
 -- 2       a       nil
 
-]]--
+]]
 function _M.children(var, tag, key, value, maxdepth)
 
 	local function get_children(var, tag, key, value, maxdepth)
