@@ -585,12 +585,19 @@ and XML character entities. </p>
 
 <p>By default, only the most basic entities are known to LuaXML:</p>
 
-<pre><code>" &amp; &lt; &gt; '
+<pre><code>" &lt; &gt; '
 </code></pre>
 
-<p>ANSI codes above 127 are directly converted to the XML character codes of the
-same number. If more character codes are needed, they can be registered using
-this function.
+<p>On top (and independent) of that, the <strong>ampersand</strong> sign always gets encoded /
+decoded separately: <code>&amp;</code> &harr; <code>&amp;amp;</code>. Character codes above 127 are
+directly converted to an appropriate XML encoding, representing the character
+number (e.g. <code>&amp;#160;</code>). If other special encodings are needed, they can be
+registered using this function.</p>
+
+<p>Note: LuaXML now manages these encodings in a (private) standard Lua table.
+This allows you to replace entries by calling <code>registerCode()</code> again, using the
+same <code>decoded</code> and a different <code>encoded</code>. Encodings may even be removed later,
+by explictly registering a <code>nil</code> value: <code>registerCode(decoded, nil)</code>.
 
 
     <h3>Parameters:</h3>
