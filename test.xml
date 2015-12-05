@@ -122,6 +122,13 @@
     <light id="0" enabled="1" position="-.5 -.75 1.0 0.0" ambient="0.3 0.3 0.3 1.0" diffuse="0.7 0.7 0.7 1.0" specular="1.0 1.0 1.0 1.0"/>
   </scene>
 
-</XperiML>
+  <cdata_test>
+    <tagged><![CDATA[<works>]]></tagged>
+    <chars><![CDATA[a  <b>	c]]></chars>
+    <amp><![CDATA[&amp;]]></amp>
+    <empty><![CDATA[]]></empty>
+    <open>  <![CDATA[<]]></open>
+    <close><![CDATA[>]]>  </close>
+  </cdata_test>
 
-  
+</XperiML>
