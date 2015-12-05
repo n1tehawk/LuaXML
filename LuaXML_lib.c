@@ -210,6 +210,8 @@ typedef struct Tokenizer_s  {
 	size_t i;
 	/// stores current read context
 	int tagMode;
+	/// stores flag for "raw" byte sequence, *DON'T* decode any further
+	int cdata;
 	/// stores next token, if already determined
 	const char *m_next;
 	/// size of next token
@@ -288,6 +290,7 @@ const char *Tokenizer_next(Tokenizer *tok) {
 	char quotMode = 0;
 	int tokenComplete = 0;
 	while (tok->m_next_size || (tok->i < tok->s_size)) {
+		tok->cdata = 0;
 
 		if (tok->m_next_size) {
 			Tokenizer_set(tok, tok->m_next, tok->m_next_size);
@@ -323,8 +326,10 @@ const char *Tokenizer_next(Tokenizer *tok) {
 					size_t b = tok->i + 9;
 					tok->i = find(tok->s, "]]>", b) + 3;
 					size_t cdata_len = tok->i - b - 3;
-					if (cdata_len > 0)
+					if (cdata_len > 0) {
+						tok->cdata = 1; // mark as "raw" byte sequence
 						return Tokenizer_set(tok, tok->s + b, cdata_len);
+					}
 				}
 				--tok->i;
 			}
@@ -685,7 +690,10 @@ int Xml_eval(lua_State *L) {
 			if (lua_gettop(L) > 1) {
 				// when normalizing, we ignore tokens considered "lead-in" type
 				if (mode != WHITESPACE_NORMALIZE || !is_lead_token(token)) {
-					Xml_pushDecode(L, token, -1);
+					if (tok->cdata) // "raw" mode, don't change token string!
+						lua_pushstring(L, token);
+					else
+						Xml_pushDecode(L, token, -1);
 					lua_rawseti(L, -2, lua_rawlen(L, -2) + 1);
 				}
 			}
