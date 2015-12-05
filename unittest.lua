@@ -75,6 +75,13 @@ function TestXml:test_basics()
 	lu.assertEquals(xml.eval("<foo>\n  <bar/> x\t</foo>", xml.WS_PRESERVE),
 					{"\n  ", {[0]="bar"}, " x\t", [0]="foo"})
 
+	-- CDATA
+	lu.assertEquals(xml.eval("<fu><![CDATA[]]></fu>"), {[0] = "fu"})
+	lu.assertEquals(xml.eval("<fu>foo<![CDATA[]]>bar</fu>"),
+		{"foo", "bar", [0] = "fu"})
+	lu.assertEquals(xml.eval("<fu>foo<![CDATA[foobar]]>bar</fu>"),
+		{"foo", "foobar", "bar", [0] = "fu"})
+
 	-- invalid XML
 	lu.assertErrorMsgContains("Malformed XML", xml.eval, "foo<bar/>")
 
@@ -113,6 +120,15 @@ function TestXml:test_parse()
 	local script_str = test:find("script")[1]
 	lu.assertEquals(script_str:sub(1, 1), '\n')
 	lu.assertEquals(script_str:sub(-1), ' ')
+
+	-- more CDATA tests
+	local cdata_test = test:find("cdata_test")
+	lu.assertEquals(cdata_test:find("tagged")[1], "<works>")
+	lu.assertEquals(cdata_test:find("chars")[1], "a  <b>\tc")
+	--lu.assertEquals(cdata_test:find("amp")[1], "&amp;")
+	lu.assertEquals(cdata_test:find("open")[1], "<")
+	lu.assertEquals(cdata_test:find("close")[1], ">")
+	lu.assertEquals(cdata_test:find("empty"), {[0] = "empty"})
 
 	-- test match() / iterate() functions against known values
 	lu.assertEquals(test:find(nil, "id", "dopplerVelocity")[1], "330.0")
