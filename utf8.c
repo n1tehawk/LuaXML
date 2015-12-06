@@ -241,7 +241,20 @@ size_t u8_strlen(const char *s)
     return count;
 }
 
+#ifndef HAVE_WCWIDTH
+# define HAVE_WCWIDTH	0
+#endif
+
+#if !defined wcwidth
+# if HAVE_WCWIDTH
 int wcwidth(wchar_t c);
+# else
+/* wcwidth doesn't exist, so assume all printable characters have width 1. */
+static inline int wcwidth(wchar_t wc) {
+	return wc == 0 ? 0 : iswprint(wc) ? 1 : -1;
+}
+# endif
+#endif
 
 size_t u8_strwidth(const char *s)
 {
