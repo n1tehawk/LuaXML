@@ -35,11 +35,12 @@ endif
 all:  LuaXML_lib$(SHLIBSUFFIX)
 
 # project specific link rules:
-LuaXML_lib$(SHLIBSUFFIX): LuaXML_lib.o
+LuaXML_lib$(SHLIBSUFFIX): LuaXML_lib.o utf8.o
 	$(CC) -o $@ $(LFLAGS) $^ $(LIBS) 
 
 # project specific dependencies:
 LuaXML_lib.o:  LuaXML_lib.c
+utf8.o:  utf8.c
 
 # generic rules and targets:
 .c.o:

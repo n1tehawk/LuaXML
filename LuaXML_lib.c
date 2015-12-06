@@ -31,9 +31,14 @@ THE SOFTWARE.
 
 #include <ctype.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#if LUAXML_UTF8
+# include "utf8.h"
+#endif
 
 /* compatibility with older Lua versions (<5.2) */
 #if LUA_VERSION_NUM < 502
@@ -266,13 +271,23 @@ static const char *Tokenizer_set(Tokenizer *tok, const char *s, size_t size) {
 	return tok->m_token;
 }
 
-static void Tokenizer_append(Tokenizer *tok, char ch) {
-	if (tok->m_token_size + 1 >= tok->m_token_capacity) {
+static void Tokenizer_append(Tokenizer *tok, uint32_t ch) {
+#if LUAXML_UTF8
+	size_t len = u8_charlen(ch);
+#else
+	static size_t len = 1;
+#endif
+	if (tok->m_token_size + len >= tok->m_token_capacity) {
 		tok->m_token_capacity = tok->m_token_capacity ? tok->m_token_capacity * 2 : 16;
 		tok->m_token = realloc(tok->m_token, tok->m_token_capacity);
 	}
+#if LUAXML_UTF8
+	u8_wc_toutf8(tok->m_token + tok->m_token_size, ch);
+#else
 	tok->m_token[tok->m_token_size] = ch;
-	tok->m_token[++tok->m_token_size] = 0;
+#endif
+	tok->m_token_size += len;
+	tok->m_token[tok->m_token_size] = 0;
 }
 
 const char *Tokenizer_next(Tokenizer *tok) {
@@ -287,7 +302,7 @@ const char *Tokenizer_next(Tokenizer *tok) {
 		tok->m_token_size=tok->m_token_capacity = 0;
 	}
 
-	char quotMode = 0;
+	uint32_t quotMode = 0;
 	int tokenComplete = 0;
 	while (tok->m_next_size || (tok->i < tok->s_size)) {
 		tok->cdata = 0;
@@ -299,23 +314,30 @@ const char *Tokenizer_next(Tokenizer *tok) {
 			return tok->m_token;
 		}
 
-		switch (tok->s[tok->i]) {
+		size_t next_i = tok->i;
+#if LUAXML_UTF8
+		register uint32_t ch = u8_nextchar(tok->s, &next_i); // also updates next_i
+#else
+		register uint32_t ch = tok->s[next_i++];
+#endif
+
+		switch (ch) {
 		case '"':
 		case '\'':
 			if (tok->tagMode) {
 				// toggle quotation mode
 				if (!quotMode)
-					quotMode = tok->s[tok->i];
+					quotMode = ch;
 				else
-					if (quotMode == tok->s[tok->i]) quotMode = 0;
+					if (quotMode == ch) quotMode = 0;
 			}
-			Tokenizer_append(tok, tok->s[tok->i]);
+			Tokenizer_append(tok, ch);
 			break;
 
 		case '<':
 			if (!quotMode && (tok->i + 4 < tok->s_size)
 						&& (strncmp(tok->s + tok->i, "<!--", 4) == 0))
-				tok->i = find(tok->s, "-->", tok->i + 4) + 2; // strip comments
+				next_i = find(tok->s, "-->", tok->i + 4) + 3; // strip comments
 			else if (!quotMode && (tok->i + 9 < tok->s_size)
 						&& (strncmp(tok->s + tok->i, "<![CDATA[", 9) ==0)) {
 				if (tok->m_token_size > 0)
@@ -331,19 +353,19 @@ const char *Tokenizer_next(Tokenizer *tok) {
 						return Tokenizer_set(tok, tok->s + b, cdata_len);
 					}
 				}
-				--tok->i;
+				next_i = tok->i;
 			}
 			else if (!quotMode && (tok->i + 1 < tok->s_size)
 						&& ((tok->s[tok->i + 1] == '?')
 							|| (tok->s[tok->i + 1] == '!')))
-				tok->i=find(tok->s, ">", tok->i + 2); // strip meta information
+				next_i = find(tok->s, ">", tok->i + 2) + 1; // strip meta information
 			else if (!quotMode && !tok->tagMode) {
 				if ((tok->i + 1 < tok->s_size)
 						&& (tok->s[tok->i + 1] == '/')) {
 					// "</" sequence that starts a closing tag
 					tok->m_next = ESC_str;
 					tok->m_next_size = 1;
-					tok->i=find(tok->s, ">", tok->i + 2);
+					next_i = find(tok->s, ">", tok->i + 2) + 1;
 				} else {
 					// regular '<' opening a new tag
 					tok->m_next = OPEN_str;
@@ -352,7 +374,7 @@ const char *Tokenizer_next(Tokenizer *tok) {
 				}
 				tokenComplete = 1;
 			}
-			else Tokenizer_append(tok, tok->s[tok->i]);
+			else Tokenizer_append(tok, ch);
 			break;
 
 		case '/':
@@ -364,11 +386,11 @@ const char *Tokenizer_next(Tokenizer *tok) {
 					tok->tagMode = 0;
 					tok->m_next = ESC_str;
 					tok->m_next_size = 1;
-					++tok->i;
+					++next_i;
 				}
-				else Tokenizer_append(tok, tok->s[tok->i]);
+				else Tokenizer_append(tok, ch);
 			}
-			else Tokenizer_append(tok, tok->s[tok->i]);
+			else Tokenizer_append(tok, ch);
 			break;
 
 		case '>':
@@ -379,7 +401,7 @@ const char *Tokenizer_next(Tokenizer *tok) {
 				tok->m_next = CLOSE_str;
 				tok->m_next_size = 1;
 			}
-			else Tokenizer_append(tok, tok->s[tok->i]);
+			else Tokenizer_append(tok, ch);
 			break;
 
 		case ' ':
@@ -392,13 +414,13 @@ const char *Tokenizer_next(Tokenizer *tok) {
 			}
 			else
 				if (tok->m_token_size || tok->mode != WHITESPACE_TRIM)
-					Tokenizer_append(tok, tok->s[tok->i]);
+					Tokenizer_append(tok, ch);
 			break;
 
 		default:
-			Tokenizer_append(tok, tok->s[tok->i]);
+			Tokenizer_append(tok, ch);
 		}
-		++tok->i;
+		tok->i = next_i;
 		if (tok->i >= tok->s_size || (tokenComplete && tok->m_token_size)) {
 			tokenComplete = 0;
 			if (tok->mode == WHITESPACE_TRIM) // trim whitespace
