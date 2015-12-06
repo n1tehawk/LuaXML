@@ -83,6 +83,7 @@ function TestXml:test_basics()
 		{"foo", "foobar", "bar", [0] = "fu"})
 
 	-- invalid XML
+	lu.assertErrorMsgContains("invalid control character", xml.eval, "<foo>\a<foo/>")
 	lu.assertErrorMsgContains("Malformed XML", xml.eval, "foo<bar/>")
 
 	-- UTF-8 BOM (byte order mark)
