@@ -25,7 +25,7 @@ dependencies = {
 build = {
 	type = "builtin",
 	modules = {
-		LuaXML_lib = "LuaXML_lib.c",
+		LuaXML_lib = {"LuaXML_lib.c", "utf8.c"},
 		LuaXML = "LuaXML.lua",
 	}
 }

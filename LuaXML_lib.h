@@ -1,6 +1,9 @@
 #ifndef LUAXML_LIB_H
 #define LUAXML_LIB_H
 
+#ifndef LUAXML_UTF8
+# define LUAXML_UTF8	1 /* set to 1 for improved UTF-8 support / robustness */
+#endif
 #ifndef LUAXML_DEBUG
 # define LUAXML_DEBUG	0 /* set to 1 to enable debugging output */
 #endif
