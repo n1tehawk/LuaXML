@@ -203,6 +203,7 @@ enum whitespace_mode {
 #define ESC	27	/* end of scope, closing tag */
 #define OPN	28	/* "open", start of tag */
 #define CLS	29	/* closes opening tag, actual content follows */
+#define ERR	30	/* indicates error condition (using m_next) */
 
 //--- internal tokenizer -------------------------------------------
 
@@ -295,6 +296,7 @@ const char *Tokenizer_next(Tokenizer *tok) {
 	static const char ESC_str[] = {ESC, 0};
 	static const char OPEN_str[] = {OPN, 0};
 	static const char CLOSE_str[] = {CLS, 0};
+	static const char ERROR_str[] = {ERR, 0};
 
 	if(tok->m_token) {
 		free(tok->m_token);
@@ -320,6 +322,17 @@ const char *Tokenizer_next(Tokenizer *tok) {
 #else
 		register uint32_t ch = tok->s[next_i++];
 #endif
+
+		if (ch < 0x20 && !(ch == 9 || ch == 10 || ch == 13)) {
+			char buf[80];
+			int len = snprintf(buf, sizeof(buf),
+				"Malformed XML: invalid control character (0x%02X) at pos %d",
+				ch, tok->i);
+			Tokenizer_set(tok, buf, len);
+			tok->m_next = ERROR_str;
+			tok->m_next_size = 1;
+			return NULL;
+		}
 
 		switch (ch) {
 		case '"':
@@ -724,6 +737,13 @@ int Xml_eval(lua_State *L) {
 					luaL_error(L, "Malformed XML: non-empty string '%s' before any tag (parser pos %d)",
 							   token, (int)tok->i);
 		}
+
+	// check for Tokenizer error
+	if (tok->m_next && *tok->m_next == ERR) {
+		lua_pushlstring(L, tok->m_token, tok->m_token_size); // push error msg
+		lua_error(L);
+	}
+
 	Tokenizer_delete(tok);
 	return lua_gettop(L) - 1;
 }
