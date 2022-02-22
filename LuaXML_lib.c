@@ -671,10 +671,14 @@ int Xml_eval(lua_State *L) {
 				// parse tag header
 				size_t sepPos = find(token, "=", 0);
 				if (token[sepPos]) { // regular attribute (key="value")
-					const char *aVal = token + sepPos + 2;
-					lua_pushlstring(L, token, sepPos);
-					Xml_pushDecode(L, aVal, strlen(aVal) - 1);
-					lua_rawset(L, -3);
+					if (token[sepPos + 1] == '"' || token[sepPos + 1] == '\'') {
+						const char *aVal = token + sepPos + 2;
+						lua_pushlstring(L, token, sepPos);
+						Xml_pushDecode(L, aVal, strlen(aVal) - 1);
+						lua_rawset(L, -3);
+					} else {
+						luaL_error(L, "Malformed XML: attribute value not quoted in '%s'", token);
+					}
 				}
 			}
 			if (!token || (*token == ESC)) {

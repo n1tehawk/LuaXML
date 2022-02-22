@@ -93,6 +93,9 @@ function TestXml:test_basics()
 	lu.assertErrorMsgContains("file error or file not found",
 		xml.load, "invalid_filename")
 
+	-- malformed XML attribute
+	lu.assertErrorMsgContains("Malformed XML", xml.eval, "<a bad=0></a>")
+
 	-- safeguard against global namespace pollution
 	lu.assertNil(_G.xml)
 end
